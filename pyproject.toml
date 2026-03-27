@@ -1,0 +1,19 @@
+[project]
+name = "apple-fm-cli"
+version = "0.1.1"
+description = "A simple CLI for Apple Foundation Models"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "apple-fm-sdk",
+]
+
+[project.scripts]
+apple-fm-cli = "apple_fm_cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+apple-fm-sdk = { git = "https://github.com/apple/python-apple-fm-sdk.git" }
