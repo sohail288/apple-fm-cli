@@ -7,6 +7,7 @@ import urllib.request
 import urllib.parse
 import re
 import html
+import httpx
 from typing import Any
 
 import apple_fm_sdk as fm
@@ -91,7 +92,7 @@ class GoogleSearchParams:
 
 class GoogleSearchTool(fm.Tool):
     name = "google_search"
-    description = "Searches the web for current events, facts, or information and returns text snippets."
+    description = "Searches the web for current events, facts, or information. Returns snippets and the content of the top linked pages."
 
     @property
     def arguments_schema(self) -> fm.GenerationSchema:
@@ -105,30 +106,71 @@ class GoogleSearchTool(fm.Tool):
         if not query:
             return "Error: Could not extract query from tool arguments."
             
-        try:
-            url = "https://lite.duckduckgo.com/lite/"
-            data = urllib.parse.urlencode({'q': query}).encode('utf-8')
-            req = urllib.request.Request(url, data=data, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
-            
-            loop = asyncio.get_event_loop()
-            response = await loop.run_in_executor(None, urllib.request.urlopen, req)
-            html_content = response.read().decode('utf-8')
-            
-            # Use flexible regex for both snippets and links to handle quote variance
-            snippets = re.findall(r'<td class=["\']result-snippet["\'][^>]*>(.*?)</td>', html_content, re.DOTALL | re.IGNORECASE)
-            
-            if not snippets:
-                # Fallback to link titles if snippets aren't found
-                links = re.findall(r'<a[^>]+class=["\']result-link["\'][^>]*>(.*?)</a>', html_content, re.DOTALL | re.IGNORECASE)
-                if not links:
-                    return "No results found."
-                results = [html.unescape(re.sub(r'<[^>]+>', '', l)).strip() for l in links[:5]]
-            else:
-                results = [html.unescape(re.sub(r'<[^>]+>', '', s)).strip() for s in snippets[:5]]
+        headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
+            try:
+                # Search on DuckDuckGo Lite
+                search_url = "https://lite.duckduckgo.com/lite/"
+                response = await client.post(search_url, data={'q': query})
+                response.raise_for_status()
+                html_content = response.text
                 
-            return "\n\n".join(results)
-        except Exception as e:
-            return f"Search error: {e}"
+                # Extract links: first find tags with class 'result-link', then extract components from each
+                a_tags = re.findall(r'<a[^>]+class=["\']result-link["\'][^>]*>.*?</a>', html_content, re.DOTALL | re.IGNORECASE)
+                link_matches = []
+                for a in a_tags:
+                    href_match = re.search(r'href=["\'](.*?)["\']', a, re.IGNORECASE)
+                    if href_match:
+                        title = re.sub(r'<[^>]+>', '', a).strip()
+                        link_matches.append((href_match.group(1), title))
+                
+                snippets = re.findall(r'<td class=["\']result-snippet["\'][^>]*>(.*?)</td>', html_content, re.DOTALL | re.IGNORECASE)
+                
+                if not link_matches:
+                    return "No results found."
+
+                # Prepare the final report
+                output = [f"Search results for: {query}\n"]
+                
+                # Extract top 3 links
+                top_links = []
+                for href, title in link_matches[:3]:
+                    if href.startswith('//'):
+                        href = 'https:' + href
+                    elif href.startswith('/'):
+                        href = 'https://duckduckgo.com' + href
+                    top_links.append((href, html.unescape(title)))
+
+                # Fetch contents of top 3 links concurrently
+                async def fetch_page(url: str, title: str) -> str:
+                    try:
+                        resp = await client.get(url, timeout=5.0)
+                        if resp.status_code == 200:
+                            # Extract body text (crude extraction)
+                            text = re.sub(r'<(script|style|header|footer|nav)[^>]*>.*?</\1>', '', resp.text, flags=re.DOTALL | re.IGNORECASE)
+                            text = re.sub(r'<[^>]+>', ' ', text)
+                            text = html.unescape(text)
+                            text = re.sub(r'\s+', ' ', text).strip()
+                            return f"Source: {title} ({url})\nContent: {text[:1500]}..."
+                        return f"Source: {title} ({url})\nStatus: Failed to fetch (HTTP {resp.status_code})"
+                    except Exception as e:
+                        return f"Source: {title} ({url})\nStatus: Error ({str(e)})"
+
+                page_contents = await asyncio.gather(*(fetch_page(u, t) for u, t in top_links))
+                
+                output.append("Summaries from Top Pages:")
+                output.extend(page_contents)
+                
+                if snippets:
+                    output.append("\nSearch Snippets:")
+                    for s in snippets[:3]:
+                        output.append("- " + html.unescape(re.sub(r'<[^>]+>', '', s)).strip())
+                
+                return "\n\n".join(output)
+                
+            except Exception as e:
+                return f"Search error: {e}"
 
 AVAILABLE_TOOLS = {
     "bash": BashTool,
