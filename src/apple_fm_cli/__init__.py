@@ -7,45 +7,45 @@ from typing import Any
 
 import apple_fm_sdk as fm
 
-def map_json_schema_type(schema: dict) -> type:
-    t = schema.get("type", "string")
-    if t == "string": return str
-    if t == "integer": return int
-    if t == "number": return float
-    if t == "boolean": return bool
-    if t == "array":
-        items_schema = schema.get("items", {})
-        item_type = map_json_schema_type(items_schema)
-        return list[item_type]
-    if t == "object":
-        return create_dynamic_class("NestedObject", schema)
-    return str
-
-def create_dynamic_class(name: str, schema: dict) -> type:
-    annotations = {}
-    class_attrs = {}
-
-    for prop_name, prop_schema in schema.get("properties", {}).items():
-        py_type = map_json_schema_type(prop_schema)
-        annotations[prop_name] = py_type
-        
-        guide_kwargs = {}
-        if "description" in prop_schema:
-            guide_kwargs["description"] = prop_schema["description"]
-        
-        # Add basic constraints if present
-        if "minimum" in prop_schema and "maximum" in prop_schema:
-            guide_kwargs["range"] = (prop_schema["minimum"], prop_schema["maximum"])
-
-        if guide_kwargs:
-            desc = guide_kwargs.pop("description", None)
-            if desc:
-                class_attrs[prop_name] = fm.guide(desc, **guide_kwargs)
-            else:
-                class_attrs[prop_name] = fm.guide(**guide_kwargs)
+def map_json_schema_to_type_and_guide(prop_name: str, prop_schema: dict) -> tuple[type, Any]:
+    t = prop_schema.get("type", "string")
+    py_type: type = str
     
-    class_attrs["__annotations__"] = annotations
-    cls = type(name, (object,), class_attrs)
+    if t == "integer":
+        py_type = int
+    elif t == "number":
+        py_type = float
+    elif t == "boolean":
+        py_type = bool
+    elif t == "array":
+        items_schema = prop_schema.get("items", {})
+        item_type, _ = map_json_schema_to_type_and_guide(f"{prop_name}_item", items_schema)
+        py_type = list[item_type] # type: ignore
+    elif t == "object":
+        py_type = create_dynamic_dataclass(f"{prop_name.capitalize()}Type", prop_schema)
+    
+    guide_kwargs = {}
+    if "description" in prop_schema:
+        guide_kwargs["description"] = prop_schema["description"]
+    if "minimum" in prop_schema and "maximum" in prop_schema:
+        guide_kwargs["range"] = (prop_schema["minimum"], prop_schema["maximum"])
+
+    if guide_kwargs:
+        desc = guide_kwargs.pop("description", "")
+        return py_type, fm.guide(desc, **guide_kwargs)
+    
+    return py_type, dataclasses.MISSING
+
+def create_dynamic_dataclass(name: str, schema: dict) -> type:
+    fields = []
+    for prop_name, prop_schema in schema.get("properties", {}).items():
+        py_type, guide = map_json_schema_to_type_and_guide(prop_name, prop_schema)
+        if guide is not dataclasses.MISSING:
+            fields.append((prop_name, py_type, guide))
+        else:
+            fields.append((prop_name, py_type))
+            
+    cls = dataclasses.make_dataclass(name, fields)
     return fm.generable(cls)
 
 async def run_query(query: str, output_format: str, output_schema_str: str | None) -> None:
@@ -61,23 +61,23 @@ async def run_query(query: str, output_format: str, output_schema_str: str | Non
     try:
         if output_format == "json" and output_schema_str:
             schema = json.loads(output_schema_str)
-            DynamicClass = create_dynamic_class("GeneratedObject", schema)
+            DynamicClass = create_dynamic_dataclass("GeneratedObject", schema)
             response = await session.respond(query, generating=DynamicClass)
             
-            # Print as JSON if possible
+            # Print as JSON using dataclasses.asdict
             if dataclasses.is_dataclass(response):
                 print(json.dumps(dataclasses.asdict(response), indent=2))
-            elif hasattr(response, "__dict__"):
-                # Clean up any inner objects recursively for dict
-                def clean_dict(obj: Any) -> Any:
-                    if hasattr(obj, "__dict__"):
-                        return {k: clean_dict(v) for k, v in vars(obj).items()}
-                    if isinstance(obj, list):
-                        return [clean_dict(x) for x in obj]
-                    return obj
-                print(json.dumps(clean_dict(response), indent=2))
             else:
-                print(response)
+                # Fallback for non-dataclass objects (though our dynamic ones should be)
+                def clean_obj(obj: Any) -> Any:
+                    if dataclasses.is_dataclass(obj):
+                        return dataclasses.asdict(obj)
+                    if isinstance(obj, list):
+                        return [clean_obj(x) for x in obj]
+                    if hasattr(obj, "__dict__"):
+                        return {k: clean_obj(v) for k, v in vars(obj).items()}
+                    return obj
+                print(json.dumps(clean_obj(response), indent=2))
         else:
             response = await session.respond(query)
             print(response)
