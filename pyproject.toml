@@ -17,3 +17,9 @@ build-backend = "hatchling.build"
 
 [tool.uv.sources]
 apple-fm-sdk = { git = "https://github.com/apple/python-apple-fm-sdk.git" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+]
