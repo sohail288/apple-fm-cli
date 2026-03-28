@@ -4,12 +4,19 @@ import uuid
 import dataclasses
 from typing import Any, AsyncGenerator
 
+import tiktoken
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import apple_fm_sdk as fm
 from apple_fm_cli import create_dynamic_dataclass
 
 app = FastAPI(title="Apple FM OpenAI Compatibility Server")
+
+# Use cl100k_base as a reasonable approximation for modern models
+TOKENIZER = tiktoken.get_encoding("cl100k_base")
+
+def count_tokens(text: str) -> int:
+    return len(TOKENIZER.encode(text))
 
 def format_openai_chunk(
     id: str, 
@@ -112,9 +119,6 @@ async def chat_completions(request: Request) -> Any:
             yield format_openai_chunk(completion_id, model_name, role="assistant")
             
             try:
-                # stream_response might not support 'generating' (JSON schema) directly in the same way?
-                # The SDK docs say respond() supports it. Let's check if stream_response does.
-                # Usually streaming doesn't work well with strict schema enforcement in one go.
                 async for chunk in session.stream_response(full_prompt):
                     # chunk is typically a string or has a .text attribute
                     text = chunk if isinstance(chunk, str) else getattr(chunk, "text", str(chunk))
@@ -142,6 +146,9 @@ async def chat_completions(request: Request) -> Any:
             else:
                 # response has a .text attribute
                 content = getattr(response, "text", str(response))
+            
+            prompt_tokens = count_tokens(full_prompt) + count_tokens(instructions or "")
+            completion_tokens = count_tokens(content)
                 
             return {
                 "id": completion_id,
@@ -159,9 +166,9 @@ async def chat_completions(request: Request) -> Any:
                     }
                 ],
                 "usage": {
-                    "prompt_tokens": 0, # SDK doesn't expose these easily
-                    "completion_tokens": 0,
-                    "total_tokens": 0
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens,
+                    "total_tokens": prompt_tokens + completion_tokens
                 }
             }
         except Exception as e:

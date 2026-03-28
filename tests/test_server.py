@@ -40,6 +40,8 @@ def test_chat_completions_basic(mock_fm_sdk):
     data = response.json()
     assert data["choices"][0]["message"]["content"] == "Hello world"
     assert data["object"] == "chat.completion"
+    assert data["usage"]["prompt_tokens"] > 0
+    assert data["usage"]["completion_tokens"] > 0
 
 def test_chat_completions_streaming(mock_fm_sdk):
     # Mock stream_response
