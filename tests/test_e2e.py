@@ -10,6 +10,17 @@ from pathlib import Path
 import pytest
 
 
+import apple_fm_sdk as fm
+
+@pytest.fixture(scope="session", autouse=True)
+def check_fm_available() -> None:
+    """Skip all E2E tests if Foundation Models are not available."""
+    model = fm.SystemLanguageModel()
+    is_available, reason = model.is_available()
+    if not is_available:
+        pytest.skip(f"Foundation Models not available: {reason}")
+
+
 @pytest.fixture(scope="session")
 def installed_cli() -> Generator[Path, None, None]:
     """
