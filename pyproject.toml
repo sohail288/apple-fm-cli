@@ -16,12 +16,32 @@ apple-fm-cli = "apple_fm_cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "ANN", "S", "PT"]
+ignore = ["ANN101", "ANN102", "ANN401", "S101"]
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: marks end-to-end tests (select with '-m e2e')"
+]
+
 [tool.uv.sources]
 apple-fm-sdk = { git = "https://github.com/apple/python-apple-fm-sdk.git" }
 
 [dependency-groups]
 dev = [
+    "mypy>=1.19.1",
     "pytest>=9.0.2",
     "pytest-asyncio>=1.3.0",
     "pytest-httpx>=0.36.0",
+    "ruff>=0.15.8",
 ]
