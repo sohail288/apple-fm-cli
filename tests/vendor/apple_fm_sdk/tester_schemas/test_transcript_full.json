@@ -1,0 +1,145 @@
+{
+    "version": 1,
+    "transcript": {
+        "entries": [
+            {
+                "tools": [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": "searchBreadDatabaseTool",
+                            "description": "Searches a local database for bread recipes.",
+                            "parameters": {
+                                "additionalProperties": false,
+                                "type": "object",
+                                "required": ["searchTerm", "limit"],
+                                "properties": {
+                                    "limit": {
+                                        "maximum": 6,
+                                        "type": "integer",
+                                        "description": "The number of recipes to get",
+                                        "minimum": 1
+                                    },
+                                    "searchTerm": {
+                                        "type": "string",
+                                        "description": "The type of bread to search for"
+                                    }
+                                },
+                                "x-order": ["searchTerm", "limit"],
+                                "title": "Arguments"
+                            }
+                        }
+                    }
+                ],
+                "role": "instructions",
+                "id": "0384244A-14F4-448D-88A7-CF923C9C047D",
+                "contents": [
+                    {
+                        "type": "text",
+                        "id": "A62BC9BB-1D93-47FE-BEB7-B338C26D02B1",
+                        "text": "You are a bread expert and can answer questions about bread."
+                    }
+                ]
+            },
+            {
+                "role": "user",
+                "options": {},
+                "responseFormat": {
+                    "type": "jsonSchema",
+                    "jsonSchema": {
+                        "schema": {
+                            "additionalProperties": false,
+                            "type": "object",
+                            "title": "Recipe",
+                            "properties": {
+                                "name": { "type": "string" },
+                                "instructions": {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                },
+                                "ingredients": {
+                                    "type": "array",
+                                    "items": { "type": "string" }
+                                }
+                            },
+                            "x-order": ["name", "ingredients", "instructions"],
+                            "required": ["name", "ingredients", "instructions"]
+                        },
+                        "name": "Recipe"
+                    }
+                },
+                "id": "B9FF0247-6CAD-4DF4-A34B-AA805C5A4B67",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "What is a basic recipe for a brioche?",
+                        "id": "CF2C20A2-A8AD-49DC-92CF-EAB67923EEDB"
+                    }
+                ]
+            },
+            {
+                "role": "response",
+                "id": "FB87B67F-CEB2-4864-9D2C-8B18F9A1166F",
+                "toolCalls": [
+                    {
+                        "name": "searchBreadDatabaseTool",
+                        "arguments": "{\"searchTerm\": \"brioche\", \"limit\": 1}",
+                        "id": "8A856753-32E0-4D5D-9FBC-B95AC0BBFA59"
+                    }
+                ]
+            },
+            {
+                "toolName": "searchBreadDatabaseTool",
+                "contents": [
+                    {
+                        "type": "text",
+                        "id": "BA75411F-573F-4A6E-8FF1-4792FDF42E76",
+                        "text": "[]"
+                    }
+                ],
+                "id": "8A856753-32E0-4D5D-9FBC-B95AC0BBFA59",
+                "toolCallID": "8A856753-32E0-4D5D-9FBC-B95AC0BBFA59",
+                "role": "tool"
+            },
+            {
+                "role": "response",
+                "id": "5F0131F4-9DF2-4CC1-922A-E3F8E1236A82",
+                "assets": [
+                    "com.apple.fm.language.instruct_3b.fm_api_generic.draft",
+                    "com.apple.fm.language.instruct_3b.tokenizer",
+                    "com.apple.fm.language.instruct_3b.fm_api_generic"
+                ],
+                "contents": [
+                    {
+                        "type": "structure",
+                        "structure": {
+                            "source": "Recipe",
+                            "content": {
+                                "ingredients": [
+                                    "all-purpose flour",
+                                    "water",
+                                    "sugar",
+                                    "salt",
+                                    "yeast",
+                                    "butter"
+                                ],
+                                "name": "brioche",
+                                "instructions": [
+                                    "Mix the flour, water, sugar, salt, and yeast in a bowl.",
+                                    "Knead the dough until smooth and elastic.",
+                                    "Let the dough rise in a warm place until doubled in size.",
+                                    "Shape the dough into a loaf.",
+                                    "Let the loaf rise again until puffy.",
+                                    "Bake the brioche in a preheated oven at 375°F (190°C) for 25-30 minutes.",
+                                    "Let the brioche cool on a wire rack before slicing."
+                                ]
+                            }
+                        },
+                        "id": "0"
+                    }
+                ]
+            }
+        ]
+    },
+    "type": "FoundationModels.Transcript"
+}

@@ -4,19 +4,12 @@ import uuid
 import dataclasses
 from typing import Any, AsyncGenerator
 
-import tiktoken
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 import apple_fm_sdk as fm
 from apple_fm_cli import create_dynamic_dataclass
 
 app = FastAPI(title="Apple FM OpenAI Compatibility Server")
-
-# Use cl100k_base as a reasonable approximation for modern models
-TOKENIZER = tiktoken.get_encoding("cl100k_base")
-
-def count_tokens(text: str) -> int:
-    return len(TOKENIZER.encode(text))
 
 def format_openai_chunk(
     id: str, 
@@ -147,8 +140,8 @@ async def chat_completions(request: Request) -> Any:
                 # response has a .text attribute
                 content = getattr(response, "text", str(response))
             
-            prompt_tokens = count_tokens(full_prompt) + count_tokens(instructions or "")
-            completion_tokens = count_tokens(content)
+            # Use the new token_usage method from our patched/vendored SDK
+            usage_data = await session.token_usage()
                 
             return {
                 "id": completion_id,
@@ -166,9 +159,9 @@ async def chat_completions(request: Request) -> Any:
                     }
                 ],
                 "usage": {
-                    "prompt_tokens": prompt_tokens,
-                    "completion_tokens": completion_tokens,
-                    "total_tokens": prompt_tokens + completion_tokens
+                    "prompt_tokens": usage_data.get("prompt_tokens", 0) + usage_data.get("instructions_tokens", 0),
+                    "completion_tokens": usage_data.get("completion_tokens", 0),
+                    "total_tokens": usage_data.get("total_tokens", 0)
                 }
             }
         except Exception as e:
