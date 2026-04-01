@@ -232,7 +232,9 @@ def test_responses_api_streaming_deduplicates_multiline_snapshots(mock_fm_sdk):
     assert deltas == ["Step 1\n", "Step 2\n", "Step 3"]
 
 
-def test_responses_api_codex_streaming_keeps_deltas_and_omits_final_text_content(mock_fm_sdk):
+def test_responses_api_codex_interactive_streaming_keeps_deltas_and_includes_final_text_content(
+    mock_fm_sdk,
+):
     # Given
     async def mock_stream(prompt):
         yield "2"
@@ -263,8 +265,45 @@ def test_responses_api_codex_streaming_keeps_deltas_and_omits_final_text_content
         if payload.get("type") == "response.output_text.delta"
     ]
     assert deltas == ["2"]
-    item_done = next(payload for payload in payloads if payload.get("type") == "response.output_item.done")
-    assert item_done["item"]["content"] == []
+    item_done = next(
+        payload for payload in payloads if payload.get("type") == "response.output_item.done"
+    )
+    assert item_done["item"]["content"] == [{"type": "output_text", "text": "2"}]
+
+
+def test_responses_api_codex_exec_streaming_uses_final_item_content(mock_fm_sdk):
+    # Given
+    async def mock_stream(prompt):
+        yield "2"
+
+    mock_fm_sdk["session"].stream_response = mock_stream
+    codex_instructions = (
+        "You are a coding agent running in the Codex CLI, a terminal-based coding assistant.\n"
+        "Codex CLI is an open source project led by OpenAI."
+    )
+
+    # When
+    response = client.post(
+        "/v1/responses",
+        json={
+            "model": "fm",
+            "input": "what is 1 + 1",
+            "instructions": codex_instructions,
+            "stream": True,
+        },
+        headers={"user-agent": "codex_exec/0.116.0"},
+    )
+
+    # Then
+    assert response.status_code == 200
+    payloads = [json.loads(data) for _, data in parse_sse_events(response.text) if data != "[DONE]"]
+    assert not any(payload.get("type") == "response.output_text.delta" for payload in payloads)
+    item_done = next(
+        payload for payload in payloads if payload.get("type") == "response.output_item.done"
+    )
+    assert item_done["item"]["content"] == [{"type": "output_text", "text": "2"}]
+    completed = next(payload for payload in payloads if payload.get("type") == "response.completed")
+    assert completed["response"]["output"] == []
 
 
 def test_responses_api_json_schema(mock_fm_sdk):
@@ -330,6 +369,44 @@ def test_responses_api_adapts_codex_instructions(mock_fm_sdk):
     assert mock_fm_sdk["session_ctor"].call_args.kwargs["model"] is not None
 
 
+def test_build_responses_prompt_preserves_codex_conversation_history():
+    # Given
+    input_data = [
+        {
+            "type": "message",
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "<environment_context>\nfoo\n</environment_context>"}
+            ],
+        },
+        {
+            "type": "message",
+            "role": "user",
+            "content": [{"type": "input_text", "text": "provide a recipe for chocolate cake"}],
+        },
+        {
+            "type": "message",
+            "role": "assistant",
+            "content": [{"type": "output_text", "text": "Here is a chocolate cake recipe."}],
+        },
+        {
+            "type": "message",
+            "role": "user",
+            "content": [{"type": "input_text", "text": "What cake are we making?"}],
+        },
+    ]
+
+    # When
+    prompt = build_responses_prompt(input_data, codex_mode=True)
+
+    # Then
+    assert prompt == (
+        "User: provide a recipe for chocolate cake\n\n"
+        "Assistant: Here is a chocolate cake recipe.\n\n"
+        "User: What cake are we making?"
+    )
+
+
 def test_responses_api_preserves_regular_instructions(mock_fm_sdk):
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2 + 2 equals 4.")
@@ -350,7 +427,7 @@ def test_responses_api_preserves_regular_instructions(mock_fm_sdk):
     assert mock_fm_sdk["session_ctor"].call_args.kwargs["model"] is None
 
 
-def test_build_responses_prompt_uses_last_non_context_user_text_for_codex_mode():
+def test_build_responses_prompt_strips_environment_context_for_codex_mode():
     # Given
     input_data = [
         {
@@ -371,4 +448,4 @@ def test_build_responses_prompt_uses_last_non_context_user_text_for_codex_mode()
     prompt = build_responses_prompt(input_data, codex_mode=True)
 
     # Then
-    assert prompt == "what is 1 + 1"
+    assert prompt == "User: what is 1 + 1"

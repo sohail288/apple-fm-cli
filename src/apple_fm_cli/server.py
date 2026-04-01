@@ -24,10 +24,6 @@ CODEX_PROMPT_MARKERS = (
 
 APPLE_FM_CODEX_INSTRUCTIONS = (
     "You are a concise assistant.\n"
-    "Answer only the user's actual request.\n"
-    "Do not describe plans, repo exploration, tools, patches, or tests unless explicitly asked.\n"
-    "Ignore environment metadata unless the user asks about it.\n"
-    "For simple factual or math questions, respond with just the answer.\n"
     "If the request is ambiguous, ask one short clarifying question instead of guessing.\n"
     "Keep the response brief and literal."
 )
@@ -135,6 +131,10 @@ def is_codex_instructions(instructions: str | None) -> bool:
     return bool(instructions and any(marker in instructions for marker in CODEX_PROMPT_MARKERS))
 
 
+def is_codex_exec_request(user_agent: str | None) -> bool:
+    return bool(user_agent and "codex_exec/" in user_agent)
+
+
 def extract_content_text(content: Any) -> str:
     if isinstance(content, str):
         return content
@@ -166,14 +166,16 @@ def build_responses_prompt(input_data: Any, *, codex_mode: bool) -> str:
         raise HTTPException(status_code=400, detail="Input must be a string or array of items")
 
     if codex_mode:
-        user_texts: list[str] = []
+        prompt_parts = []
         for item in input_data:
-            if item.get("role") != "user":
+            role = item.get("role")
+            if role not in ("user", "assistant"):
                 continue
             text = strip_environment_context(extract_content_text(item.get("content")))
             if text:
-                user_texts.append(text)
-        return user_texts[-1] if user_texts else ""
+                label = "User" if role == "user" else "Assistant"
+                prompt_parts.append(f"{label}: {text}")
+        return "\n\n".join(prompt_parts)
 
     prompt_parts = []
     for item in input_data:
@@ -336,6 +338,7 @@ async def responses_api(request: Request) -> Any:
     text_config = body.get("text", {})
     response_format = text_config.get("format")
     codex_mode = is_codex_instructions(instructions)
+    codex_exec_mode = is_codex_exec_request(request.headers.get("user-agent"))
 
     if input_data is None:
         raise HTTPException(status_code=400, detail="Input is required")
@@ -409,7 +412,7 @@ async def responses_api(request: Request) -> Any:
                 async for chunk in session.stream_response(full_prompt):
                     text = chunk if isinstance(chunk, str) else getattr(chunk, "text", str(chunk))
                     delta, collected_text = incremental_text(text, collected_text)
-                    if not delta:
+                    if not delta or codex_exec_mode:
                         continue
                     yield format_sse_event(
                         "response.output_text.delta",
@@ -430,16 +433,12 @@ async def responses_api(request: Request) -> Any:
                     "type": "message",
                     "status": "completed",
                     "role": "assistant",
-                    "content": (
-                        []
-                        if codex_mode
-                        else [
-                            {
-                                "type": "output_text",
-                                "text": collected_text,
-                            }
-                        ]
-                    ),
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": collected_text,
+                        }
+                    ],
                 }
                 completed_response = {
                     "id": response_id,
