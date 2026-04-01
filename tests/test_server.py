@@ -232,7 +232,7 @@ def test_responses_api_streaming_deduplicates_multiline_snapshots(mock_fm_sdk):
     assert deltas == ["Step 1\n", "Step 2\n", "Step 3"]
 
 
-def test_responses_api_codex_streaming_suppresses_text_deltas(mock_fm_sdk):
+def test_responses_api_codex_streaming_keeps_deltas_and_omits_final_text_content(mock_fm_sdk):
     # Given
     async def mock_stream(prompt):
         yield "2"
@@ -256,8 +256,15 @@ def test_responses_api_codex_streaming_suppresses_text_deltas(mock_fm_sdk):
 
     # Then
     assert response.status_code == 200
-    assert "response.output_text.delta" not in event_names(response.text)
-    assert "response.output_item.done" in event_names(response.text)
+    payloads = [json.loads(data) for _, data in parse_sse_events(response.text) if data != "[DONE]"]
+    deltas = [
+        payload["delta"]
+        for payload in payloads
+        if payload.get("type") == "response.output_text.delta"
+    ]
+    assert deltas == ["2"]
+    item_done = next(payload for payload in payloads if payload.get("type") == "response.output_item.done")
+    assert item_done["item"]["content"] == []
 
 
 def test_responses_api_json_schema(mock_fm_sdk):

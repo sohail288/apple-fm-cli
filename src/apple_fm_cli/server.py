@@ -409,7 +409,7 @@ async def responses_api(request: Request) -> Any:
                 async for chunk in session.stream_response(full_prompt):
                     text = chunk if isinstance(chunk, str) else getattr(chunk, "text", str(chunk))
                     delta, collected_text = incremental_text(text, collected_text)
-                    if not delta or codex_mode:
+                    if not delta:
                         continue
                     yield format_sse_event(
                         "response.output_text.delta",
@@ -430,12 +430,16 @@ async def responses_api(request: Request) -> Any:
                     "type": "message",
                     "status": "completed",
                     "role": "assistant",
-                    "content": [
-                        {
-                            "type": "output_text",
-                            "text": collected_text,
-                        }
-                    ],
+                    "content": (
+                        []
+                        if codex_mode
+                        else [
+                            {
+                                "type": "output_text",
+                                "text": collected_text,
+                            }
+                        ]
+                    ),
                 }
                 completed_response = {
                     "id": response_id,
