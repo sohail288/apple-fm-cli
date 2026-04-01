@@ -7,23 +7,23 @@ This module provides classes and decorators that mirror Swift's Foundation Model
 GenerationSchema, GeneratedContent, and @Generable macro functionality.
 """
 
-from .c_helpers import _ManagedObject, _get_error_string
-from .generation_schema import GenerationSchema
-from .errors import GenerationErrorCode, _status_code_to_exception
-
+import ctypes
+import json
 import logging
 from typing import (
     Any,
     Dict,
     Optional,
-    Union,
-    Type,
     Protocol,
-    runtime_checkable,
+    Type,
+    Union,
     get_args,
+    runtime_checkable,
 )
-import json
-import ctypes
+
+from .c_helpers import _get_error_string, _ManagedObject
+from .errors import GenerationErrorCode, _status_code_to_exception
+from .generation_schema import GenerationSchema
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +87,7 @@ class GeneratedContent(_ManagedObject):
                 # Get JSON string from C pointer
                 json_cstr = lib.FMGeneratedContentGetJSONString(_ptr)
                 # Check if we got a valid result
-                if json_cstr and not (
-                    hasattr(json_cstr, "data") and json_cstr.data is None
-                ):
+                if json_cstr and not (hasattr(json_cstr, "data") and json_cstr.data is None):
                     # The return value is wrapped in a String object by ctypes
                     # The String wrapper handles memory, so we don't need to manually free
                     json_str = str(json_cstr)
@@ -102,24 +100,18 @@ class GeneratedContent(_ManagedObject):
             if content_dict:
                 json_str = json.dumps(content_dict).encode("utf-8")
                 error_code = ctypes.c_int32()  # C error status code
-                error_description = ctypes.POINTER(
-                    ctypes.c_char
-                )()  # C error description pointer
+                error_description = ctypes.POINTER(ctypes.c_char)()  # C error description pointer
                 ptr = lib.FMGeneratedContentCreateFromJSON(
                     json_str, ctypes.byref(error_code), ctypes.byref(error_description)
                 )
 
                 if error_code.value != GenerationErrorCode.SUCCESS:
                     # An error occurred, raise appropriate exception
-                    err_code, err_desc = _get_error_string(
-                        error_code, error_description
-                    )
+                    err_code, err_desc = _get_error_string(error_code, error_description)
                     error_msg = "Failed to create GeneratedContent from JSON"
                     if err_desc:
                         error_msg = error_msg + ": " + err_desc
-                    raise _status_code_to_exception(
-                        err_code or error_code.value, error_msg
-                    )
+                    raise _status_code_to_exception(err_code or error_code.value, error_msg)
 
                 super().__init__(ptr)
 
@@ -145,9 +137,7 @@ class GeneratedContent(_ManagedObject):
         # Fallback
         return json.dumps(self._content_dict)
 
-    def value(
-        self, type_class: Optional[Type] = None, for_property: Optional[str] = None
-    ) -> Any:
+    def value(self, type_class: Optional[Type] = None, for_property: Optional[str] = None) -> Any:
         """
         Extract a value from the generated content.
 
@@ -180,17 +170,13 @@ class GeneratedContent(_ManagedObject):
             try:
                 return int(value_str)
             except Exception as e:
-                logger.warning(
-                    f"Failed to convert '{value_str}' to int: {e}, returning 0"
-                )
+                logger.warning(f"Failed to convert '{value_str}' to int: {e}, returning 0")
                 return 0
         elif type_class is float:
             try:
                 return float(value_str)
             except Exception as e:
-                logger.warning(
-                    f"Failed to convert '{value_str}' to float: {e}, returning 0.0"
-                )
+                logger.warning(f"Failed to convert '{value_str}' to float: {e}, returning 0.0")
                 return 0.0
         elif type_class is bool:
             return value_str.lower() in ("true", "1", "yes")
@@ -205,13 +191,9 @@ class GeneratedContent(_ManagedObject):
                     f"Failed to parse '{value_str}' as JSON list: {e}, trying delimiter split"
                 )
                 if "," in value_str:
-                    return [
-                        item.strip() for item in value_str.split(",") if item.strip()
-                    ]
+                    return [item.strip() for item in value_str.split(",") if item.strip()]
                 elif ";" in value_str:
-                    return [
-                        item.strip() for item in value_str.split(";") if item.strip()
-                    ]
+                    return [item.strip() for item in value_str.split(";") if item.strip()]
                 else:
                     # Single item - return as single-element list
                     return [value_str.strip()] if value_str.strip() else []
@@ -220,9 +202,7 @@ class GeneratedContent(_ManagedObject):
             try:
                 return json.loads(value_str)
             except Exception as e:
-                logger.debug(
-                    f"Failed to parse '{value_str}' as JSON: {e}, returning as string"
-                )
+                logger.debug(f"Failed to parse '{value_str}' as JSON: {e}, returning as string")
                 return value_str
 
     def _unpack_nested_generables(
@@ -234,9 +214,7 @@ class GeneratedContent(_ManagedObject):
         """Recursively unpack nested Generable types."""
         # Get outer container type if any
         origin_type = (
-            type_class.__origin__
-            if type_class and hasattr(type_class, "__origin__")
-            else None
+            type_class.__origin__ if type_class and hasattr(type_class, "__origin__") else None
         )
 
         # Handle simple Generable type
@@ -246,9 +224,7 @@ class GeneratedContent(_ManagedObject):
 
         # Handle list of Generable type
         if origin_type is list:
-            non_none_types = [
-                arg for arg in get_args(type_class) if arg is not type(None)
-            ]
+            non_none_types = [arg for arg in get_args(type_class) if arg is not type(None)]
             if isinstance(raw_value, list) and len(non_none_types) == 1:
                 # Only one non-None type supported
                 actual_type = non_none_types[0]
@@ -266,18 +242,14 @@ class GeneratedContent(_ManagedObject):
 
         # Handle optional type (Union[T, None])
         if origin_type is Union:
-            non_none_types = [
-                arg for arg in get_args(type_class) if arg is not type(None)
-            ]
+            non_none_types = [arg for arg in get_args(type_class) if arg is not type(None)]
             # Only one non-None type supported
             if len(non_none_types) == 1:
                 actual_type = non_none_types[0]
                 if raw_value is None:
                     return None  # Valid since it's optional
                 # Recursively unpack since it might be a Generable or list of Generables
-                return self._unpack_nested_generables(
-                    actual_type, raw_value, for_property
-                )
+                return self._unpack_nested_generables(actual_type, raw_value, for_property)
 
         # Default return raw value, no Generable found
         return raw_value
@@ -304,9 +276,7 @@ class ConvertibleFromGeneratedContent(Protocol):
     @classmethod
     def _from_generated_content(cls, content: GeneratedContent):
         """Create instance from GeneratedContent."""
-        raise NotImplementedError(
-            "Subclasses must implement _from_generated_content class method"
-        )
+        raise NotImplementedError("Subclasses must implement _from_generated_content class method")
 
 
 class ConvertibleToGeneratedContent(Protocol):
@@ -318,18 +288,14 @@ class ConvertibleToGeneratedContent(Protocol):
     @property
     def generated_content(self) -> GeneratedContent:
         """Convert this object to GeneratedContent."""
-        raise NotImplementedError(
-            "Subclasses must implement generated_content property"
-        )
+        raise NotImplementedError("Subclasses must implement generated_content property")
 
 
 # MARK: Generable
 
 
 @runtime_checkable
-class Generable(
-    ConvertibleFromGeneratedContent, ConvertibleToGeneratedContent, Protocol
-):
+class Generable(ConvertibleFromGeneratedContent, ConvertibleToGeneratedContent, Protocol):
     """
     Protocol for types that support structured generation.
     Equivalent to Swift's Generable protocol.
@@ -349,9 +315,7 @@ class Generable(
     @classmethod
     def generation_schema(cls) -> GenerationSchema:
         """Get the generation schema for this type."""
-        raise NotImplementedError(
-            "Generable types must implement generation_schema class method"
-        )
+        raise NotImplementedError("Generable types must implement generation_schema class method")
 
     # Default PartiallyGenerated type - can be overridden
     PartiallyGenerated = None

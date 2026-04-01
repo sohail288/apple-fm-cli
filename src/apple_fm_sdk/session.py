@@ -2,30 +2,31 @@
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
 import asyncio
+import ctypes
 import json
 import logging
+import queue
+import threading
+import warnings
+from typing import Any, AsyncIterator, Optional, Type, Union, overload
+
 from apple_fm_sdk.transcript import Transcript
+
 from .c_helpers import (
+    StreamingCallback,
     _ManagedObject,
     _register_handle,
     _session_callback,
     _session_structured_callback,
     _unregister_handle,
-    StreamingCallback,
 )
+from .content import AudioContentPart, ContentPart, ImageContentPart
 from .core import SystemLanguageModel, SystemLanguageModelUseCase
-from .tool import Tool
-from .generable import Generable, GeneratedContent
-from .generation_schema import GenerationSchema
-from .generation_options import GenerationOptions
-from .content import ContentPart, ImageContentPart, AudioContentPart
-import threading
-import queue
-from typing import Any, Optional, AsyncIterator, Type, Union, overload
 from .errors import FoundationModelsError
-import warnings
-
-import ctypes
+from .generable import Generable, GeneratedContent
+from .generation_options import GenerationOptions
+from .generation_schema import GenerationSchema
+from .tool import Tool
 
 logger = logging.getLogger(__name__)
 
@@ -109,30 +110,30 @@ class LanguageModelSession(_ManagedObject):
         """Get the current token usage for the entire session transcript."""
         t_dict = await self.transcript.to_dict()
         entries = t_dict.get("transcript", {}).get("entries", [])
-        
+
         usage = {
             "total_tokens": 0,
             "prompt_tokens": 0,
             "completion_tokens": 0,
-            "instructions_tokens": 0
+            "instructions_tokens": 0,
         }
-        
+
         for entry in entries:
             role = entry.get("role")
             text_content = ""
             for content in entry.get("contents", []):
                 if content.get("type") == "text":
                     text_content += content.get("text", "")
-            
+
             count = self.token_count(text_content)
-            
+
             if role == "instructions":
                 usage["instructions_tokens"] += count
             elif role == "user":
                 usage["prompt_tokens"] += count
             elif role == "response":
                 usage["completion_tokens"] += count
-                
+
         usage["total_tokens"] = sum(v for k, v in usage.items() if k != "total_tokens")
         return usage
 
@@ -200,7 +201,7 @@ class LanguageModelSession(_ManagedObject):
         options: Optional[GenerationOptions] = None,
     ) -> Union[str, Any, GeneratedContent]:
         """Get a response to a prompt with optional guided generation."""
-        
+
         # Handle multimodal prompt
         final_prompt = ""
         if isinstance(prompt, list):
@@ -212,7 +213,7 @@ class LanguageModelSession(_ManagedObject):
                         f"Multimodal part {type(part).__name__} is currently not supported "
                         "by the native bridge and will be treated as a placeholder.",
                         UserWarning,
-                        stacklevel=2
+                        stacklevel=2,
                     )
                     final_prompt += f"\n[{type(part).__name__} Input]\n"
             prompt = final_prompt
@@ -237,16 +238,12 @@ class LanguageModelSession(_ManagedObject):
 
         # Handle guided generation from raw JSON schema string
         if json_schema is not None:
-            return await self._respond_with_schema_from_json(
-                prompt, json_schema, options
-            )
+            return await self._respond_with_schema_from_json(prompt, json_schema, options)
 
         # Handle basic text response
         return await self._respond_basic(prompt, options)
 
-    async def _respond_basic(
-        self, prompt: str, options: Optional[GenerationOptions] = None
-    ) -> str:
+    async def _respond_basic(self, prompt: str, options: Optional[GenerationOptions] = None) -> str:
         """Get a complete basic text response to a prompt."""
         async with self._request_lock:
             loop = asyncio.get_running_loop()
@@ -381,7 +378,7 @@ class LanguageModelSession(_ManagedObject):
                         f"Multimodal part {type(part).__name__} is currently not supported "
                         "by streaming and will be treated as a placeholder.",
                         UserWarning,
-                        stacklevel=2
+                        stacklevel=2,
                     )
                     final_prompt += f"\n[{type(part).__name__} Input]\n"
             prompt = final_prompt

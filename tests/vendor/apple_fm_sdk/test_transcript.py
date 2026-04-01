@@ -11,11 +11,13 @@ This test suite verifies:
 4. Error handling in the Swift layer
 """
 
-import apple_fm_sdk as fm
-import pytest
-import weakref
 import json
 import os
+import weakref
+
+import pytest
+
+import apple_fm_sdk as fm
 
 
 @pytest.mark.asyncio
@@ -31,9 +33,7 @@ async def test_get_transcript_basic():
         pytest.skip("Model not available")
 
     # Create a session
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created LanguageModelSession")
 
     # Get transcript
@@ -58,9 +58,7 @@ async def test_get_transcript_after_interaction():
         pytest.skip("Model not available")
 
     # Create a session
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created LanguageModelSession")
 
     # Send a prompt and get response
@@ -95,9 +93,7 @@ async def test_get_transcript_multiple_interactions():
         pytest.skip("Model not available")
 
     # Create a session
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful math tutor.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful math tutor.", model=model)
     print("✓ Created LanguageModelSession")
 
     # Multiple interactions
@@ -198,9 +194,7 @@ async def test_transcript_lifetime_with_session():
         pytest.skip("Model not available")
 
     # Create session and get weak reference
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created session")
 
     # Get transcript reference
@@ -241,9 +235,7 @@ async def test_transcript_pointer_validity():
         print(f"⚠️ Skipping test - model not available: {reason}")
         pytest.skip("Model not available")
 
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created session")
 
     # Store the pointer value
@@ -276,9 +268,7 @@ async def test_transcript_error_handling():
         print(f"⚠️ Skipping test - model not available: {reason}")
         pytest.skip("Model not available")
 
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created session")
 
     # Normal case should work
@@ -306,9 +296,7 @@ async def test_multiple_transcript_accesses():
         print(f"⚠️ Skipping test - model not available: {reason}")
         pytest.skip("Model not available")
 
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
     print("✓ Created session")
 
     # Access transcript multiple times
@@ -331,9 +319,7 @@ async def test_from_dict_with_simple_transcript():
     print("\n=== Testing from_dict - Simple Transcript ===")
 
     # Load the simple test transcript
-    test_file = os.path.join(
-        os.path.dirname(__file__), "tester_schemas", "test_transcript.json"
-    )
+    test_file = os.path.join(os.path.dirname(__file__), "tester_schemas", "test_transcript.json")
     with open(test_file, "r") as f:
         transcript_data = json.load(f)
 
@@ -438,7 +424,7 @@ async def test_from_dict_with_invalid_json():
         "version": 1,
         "type": "FoundationModels.Transcript",
         "transcript": {
-            "entries": [] # Empty entries might be valid or invalid depending on implementation
+            "entries": []  # Empty entries might be valid or invalid depending on implementation
         },
     }
 

@@ -1,27 +1,28 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-from .generable import (
-    Generable,
-    GenerationSchema,
-    GeneratedContent,
-    GenerationID,
-    ConvertibleFromGeneratedContent,
-)
-from .generation_property import Property
-from .errors import InvalidGenerationSchemaError
+import logging
 from dataclasses import dataclass, field
 from typing import (
-    Optional,
-    Union,
-    get_type_hints,
-    get_args,
-    Type,
-    List,
     Callable,
+    List,
+    Optional,
+    Type,
+    Union,
+    get_args,
+    get_type_hints,
     overload,
 )
-import logging
+
+from .errors import InvalidGenerationSchemaError
+from .generable import (
+    ConvertibleFromGeneratedContent,
+    Generable,
+    GeneratedContent,
+    GenerationID,
+    GenerationSchema,
+)
+from .generation_property import Property
 
 logger = logging.getLogger(__name__)
 
@@ -144,9 +145,7 @@ def generable(
     return decorator
 
 
-def _apply_generable_decorator(
-    cls: type, description: Optional[str]
-) -> type[Generable]:
+def _apply_generable_decorator(cls: type, description: Optional[str]) -> type[Generable]:
     """
     Internal function that applies the generable transformation to a class.
 
@@ -226,9 +225,7 @@ def _apply_generable_decorator(
     cls._generable = True
     cls._generable_description = description
 
-    cls.generation_schema = classmethod(
-        generation_schema
-    )  # makes schema generation a class method
+    cls.generation_schema = classmethod(generation_schema)  # makes schema generation a class method
 
     # Add ConvertibleFromGeneratedContent support
     cls._from_generated_content = classmethod(_from_generated_content)

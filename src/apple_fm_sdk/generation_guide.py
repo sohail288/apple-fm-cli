@@ -21,10 +21,10 @@ Example:
             favoriteFood: str = guide("Favorite food", anyOf=["fish", "chicken", "tuna"])
 """
 
-from typing import Any, List, Optional, Union
+import ctypes
 from dataclasses import field
 from enum import Enum
-import ctypes
+from typing import Any, List, Optional, Union
 
 try:
     from . import _ctypes_bindings as lib
@@ -280,21 +280,13 @@ class GenerationGuide:
         elif guide_type == GuideType.count:
             lib.FMGenerationSchemaPropertyAddCountGuide(prop_ptr, int(value), wrapped)
         elif guide_type == GuideType.maxItems:
-            lib.FMGenerationSchemaPropertyAddMaxItemsGuide(
-                prop_ptr, int(value), wrapped
-            )
+            lib.FMGenerationSchemaPropertyAddMaxItemsGuide(prop_ptr, int(value), wrapped)
         elif guide_type == GuideType.maximum:
-            lib.FMGenerationSchemaPropertyAddMaximumGuide(
-                prop_ptr, float(value), wrapped
-            )
+            lib.FMGenerationSchemaPropertyAddMaximumGuide(prop_ptr, float(value), wrapped)
         elif guide_type == GuideType.minItems:
-            lib.FMGenerationSchemaPropertyAddMinItemsGuide(
-                prop_ptr, int(value), wrapped
-            )
+            lib.FMGenerationSchemaPropertyAddMinItemsGuide(prop_ptr, int(value), wrapped)
         elif guide_type == GuideType.minimum:
-            lib.FMGenerationSchemaPropertyAddMinimumGuide(
-                prop_ptr, float(value), wrapped
-            )
+            lib.FMGenerationSchemaPropertyAddMinimumGuide(prop_ptr, float(value), wrapped)
         elif guide_type == GuideType.range:
             min_val, max_val = value
             lib.FMGenerationSchemaPropertyAddRangeGuide(
@@ -330,9 +322,7 @@ class GenerationGuide:
         choice_ptrs = (ctypes.POINTER(ctypes.c_char) * len(anyOf))(
             *[ctypes.cast(s, ctypes.POINTER(ctypes.c_char)) for s in c_strings]
         )
-        lib.FMGenerationSchemaPropertyAddAnyOfGuide(
-            prop_ptr, choice_ptrs, len(anyOf), wrapped
-        )
+        lib.FMGenerationSchemaPropertyAddAnyOfGuide(prop_ptr, choice_ptrs, len(anyOf), wrapped)
 
 
 def guide(

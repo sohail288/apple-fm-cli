@@ -24,15 +24,15 @@ Example:
             pass
 """
 
+import ctypes
+from ctypes import c_int
+from enum import IntEnum
+from typing import Optional
+
 from .c_helpers import (
     _ManagedObject,
 )
-from enum import IntEnum
-from typing import Optional
 from .errors import FoundationModelsError
-
-import ctypes
-from ctypes import c_int
 
 try:
     from . import _ctypes_bindings as lib
@@ -125,9 +125,7 @@ class SystemLanguageModel(_ManagedObject):
         self,
     ) -> tuple[bool, Optional[SystemLanguageModelUnavailableReason]]:
         reason = c_int()
-        is_available = lib.FMSystemLanguageModelIsAvailable(
-            self._ptr, ctypes.byref(reason)
-        )
+        is_available = lib.FMSystemLanguageModelIsAvailable(self._ptr, ctypes.byref(reason))
 
         if is_available:
             return True, None

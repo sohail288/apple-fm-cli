@@ -2,14 +2,15 @@
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
 import asyncio
-import threading
-import logging
-from .generation_schema import GenerationSchema
-from .generable import GeneratedContent
-from .c_helpers import _ManagedObject, _get_error_string
 import ctypes
+import logging
+import threading
 from abc import ABC, abstractmethod
+
+from .c_helpers import _get_error_string, _ManagedObject
 from .errors import _status_code_to_exception
+from .generable import GeneratedContent
+from .generation_schema import GenerationSchema
 
 logger = logging.getLogger(__name__)
 
@@ -253,9 +254,7 @@ class Tool(_ManagedObject, ABC):
 
         # Create the C callback function type matching the bindings
         # UNCHECKED(None) in the bindings returns ctypes.c_void_p
-        CallbackType = ctypes.CFUNCTYPE(
-            ctypes.c_void_p, lib.FMGeneratedContentRef, ctypes.c_uint
-        )
+        CallbackType = ctypes.CFUNCTYPE(ctypes.c_void_p, lib.FMGeneratedContentRef, ctypes.c_uint)
 
         # Create the actual callback function
         def _c_callback_impl(content_ref, call_id):
@@ -355,9 +354,7 @@ class Tool(_ManagedObject, ABC):
 
     def _verify_subclass_(self):
         assert hasattr(self, "name"), "Tool subclass must have a 'name' property."
-        assert hasattr(self, "description"), (
-            "Tool subclass must have a 'description' property."
-        )
+        assert hasattr(self, "description"), "Tool subclass must have a 'description' property."
         assert hasattr(self, "arguments_schema"), (
             "Tool subclass must have an 'arguments_schema' property."
         )
@@ -367,8 +364,6 @@ class Tool(_ManagedObject, ABC):
         if not isinstance(self.description, str):
             raise TypeError("Tool description must be a string.")
         if not isinstance(self.arguments_schema, GenerationSchema):
-            raise TypeError(
-                "Tool arguments_schema must be a GenerationSchema instance."
-            )
+            raise TypeError("Tool arguments_schema must be a GenerationSchema instance.")
         if not asyncio.iscoroutinefunction(self.call):
             raise TypeError("Tool call method must be an async function.")

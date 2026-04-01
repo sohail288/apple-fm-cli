@@ -37,9 +37,11 @@ Callback Safety:
 """
 
 import asyncio
-import threading
-import queue
+import ctypes
 import logging
+import queue
+import threading
+from ctypes import c_void_p
 from typing import Optional
 
 from .errors import (
@@ -47,9 +49,6 @@ from .errors import (
     GenerationErrorCode,
     _status_code_to_exception,
 )
-
-import ctypes
-from ctypes import c_void_p
 
 try:
     from . import _ctypes_bindings as lib
@@ -109,9 +108,7 @@ def _unregister_handle(handle_ptr):
         It's safe to call with None or an already-unregistered handle.
     """
     if handle_ptr:
-        handle_addr = (
-            handle_ptr.value if isinstance(handle_ptr, c_void_p) else handle_ptr
-        )
+        handle_addr = handle_ptr.value if isinstance(handle_ptr, c_void_p) else handle_ptr
         with _handle_lock:
             _active_handles.pop(handle_addr, None)
 
@@ -378,9 +375,7 @@ def _session_structured_callback(status, content_ptr, future_handle):
             try:
                 lib.FMRelease(content_ptr)
             except Exception as cleanup_error:
-                logger.error(
-                    f"Error releasing C pointer during session cleanup: {cleanup_error}"
-                )
+                logger.error(f"Error releasing C pointer during session cleanup: {cleanup_error}")
 
         try:
             future = _safe_from_handle(future_handle)
@@ -389,9 +384,7 @@ def _session_structured_callback(status, content_ptr, future_handle):
                     _set_future_exception(future, e), future.get_loop()
                 )
         except Exception as error:
-            logger.error(
-                f"Unhandled Exception in structured session callback cleanup: {error}"
-            )
+            logger.error(f"Unhandled Exception in structured session callback cleanup: {error}")
 
 
 class StreamingCallback:

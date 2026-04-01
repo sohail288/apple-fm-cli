@@ -157,6 +157,4 @@ def _status_code_to_exception(
         message = error_messages[error_code]
         return error_class(f"{message}: {debug_description}")
     else:
-        return GenerationError(
-            f"Generation error (status: {status_code}): {debug_description}"
-        )
+        return GenerationError(f"Generation error (status: {status_code}): {debug_description}")

@@ -7,8 +7,9 @@ import re
 import sys
 from typing import Any
 
-import apple_fm_sdk as fm
 import httpx
+
+import apple_fm_sdk as fm
 
 
 def map_json_schema_to_type_and_guide(
@@ -286,7 +287,9 @@ def main() -> None:
         help="Output format (text/json)",
     )
     query_parser.add_argument("--output-schema", type=str, help="JSON schema for output")
-    query_parser.add_argument("--tools", type=str, help="Comma-separated tools (bash,google_search)")
+    query_parser.add_argument(
+        "--tools", type=str, help="Comma-separated tools (bash,google_search)"
+    )
 
     # 'server' command
     server_parser = subparsers.add_parser("server", help="Start an OpenAI-compatible server")
@@ -294,9 +297,10 @@ def main() -> None:
     server_parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
 
     # If no arguments or just -q ..., we should handle it gracefully for backwards compatibility
-    # but the sub-parser makes it slightly different. 
+    # but the sub-parser makes it slightly different.
     # Let's check sys.argv and inject 'query' if first arg looks like -q or --query
     import sys
+
     if len(sys.argv) > 1 and sys.argv[1] in ("-q", "--query", "--output", "--tools"):
         sys.argv.insert(1, "query")
 
@@ -309,6 +313,7 @@ def main() -> None:
         asyncio.run(run_query(args.query, args.output, args.output_schema, args.tools))
     elif args.command == "server":
         from apple_fm_cli.server import run_server
+
         run_server(host=args.host, port=args.port)
     else:
         parser.print_help()

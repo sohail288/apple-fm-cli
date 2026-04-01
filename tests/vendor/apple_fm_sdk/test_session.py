@@ -5,27 +5,29 @@
 Tests for LanguageModelSession functionality.
 """
 
-import pytest
-import json
 import asyncio
-import apple_fm_sdk as fm
+import json
+
+import pytest
 from tester_tools.tester_tools import SearchBreadDatabaseTool
+
+import apple_fm_sdk as fm
 
 
 def test_import_session():
     """Test that we can import LanguageModelSession and related classes."""
     print("\n=== Testing LanguageModelSession imports ===")
 
-    import apple_fm_sdk # noqa: F401 expected unused import
+    import apple_fm_sdk  # noqa: F401 expected unused import
 
     print("✓ Successfully imported apple_fm_sdk")
 
     from apple_fm_sdk import (
-        LanguageModelSession, # noqa: F401 expected unused import
-        FoundationModelsError, # noqa: F401 expected unused import
-        GenerationError, # noqa: F401 expected unused import
-        ExceededContextWindowSizeError, # noqa: F401 expected unused import
-        GuardrailViolationError, # noqa: F401 expected unused import
+        ExceededContextWindowSizeError,  # noqa: F401 expected unused import
+        FoundationModelsError,  # noqa: F401 expected unused import
+        GenerationError,  # noqa: F401 expected unused import
+        GuardrailViolationError,  # noqa: F401 expected unused import
+        LanguageModelSession,  # noqa: F401 expected unused import
     )
 
     print("✓ Successfully imported LanguageModelSession and error classes")
@@ -78,9 +80,7 @@ def test_session_initialization_options(model):
 
     # Test 4: Session with instructions and model
     print("\n4. Testing session with instructions and model...")
-    session4 = fm.LanguageModelSession(
-        instructions="You are a creative writer.", model=model
-    )
+    session4 = fm.LanguageModelSession(instructions="You are a creative writer.", model=model)
     assert session4 is not None
     print("✓ Created session with instructions and model")
 
@@ -88,17 +88,13 @@ def test_session_initialization_options(model):
     print("\n5. Testing session with different model use cases...")
 
     # General use case
-    model_general = fm.SystemLanguageModel(
-        use_case=fm.SystemLanguageModelUseCase.GENERAL
-    )
+    model_general = fm.SystemLanguageModel(use_case=fm.SystemLanguageModelUseCase.GENERAL)
     session5a = fm.LanguageModelSession(model=model_general)
     assert session5a is not None
     print("✓ Created session with GENERAL use case model")
 
     # Content tagging use case
-    model_tagging = fm.SystemLanguageModel(
-        use_case=fm.SystemLanguageModelUseCase.CONTENT_TAGGING
-    )
+    model_tagging = fm.SystemLanguageModel(use_case=fm.SystemLanguageModelUseCase.CONTENT_TAGGING)
     session5b = fm.LanguageModelSession(model=model_tagging)
     assert session5b is not None
     print("✓ Created session with CONTENT_TAGGING use case model")
@@ -107,9 +103,7 @@ def test_session_initialization_options(model):
     print("\n6. Testing session with different guardrails...")
 
     # Default guardrails
-    model_default = fm.SystemLanguageModel(
-        guardrails=fm.SystemLanguageModelGuardrails.DEFAULT
-    )
+    model_default = fm.SystemLanguageModel(guardrails=fm.SystemLanguageModelGuardrails.DEFAULT)
     session6a = fm.LanguageModelSession(model=model_default)
     assert session6a is not None
     print("✓ Created session with DEFAULT guardrails")
@@ -161,9 +155,7 @@ async def test_generation_options_with_respond(model):
     import apple_fm_sdk as fm
 
     # Create a session
-    session = fm.LanguageModelSession(
-        instructions="You are a helpful assistant.", model=model
-    )
+    session = fm.LanguageModelSession(instructions="You are a helpful assistant.", model=model)
 
     # Test 1: Basic response without options
     print("\n1. Testing respond without options...")
@@ -204,9 +196,7 @@ async def test_generation_options_with_respond(model):
     response5 = await session.respond("Say hello", options=options5)
     assert response5 is not None
     assert isinstance(response5, str)
-    print(
-        f"✓ Response with random sampling (probability threshold): {response5[:50]}..."
-    )
+    print(f"✓ Response with random sampling (probability threshold): {response5[:50]}...")
 
     # Test 6: Response with maximum_response_tokens
     print("\n6. Testing respond with maximum_response_tokens...")
@@ -215,7 +205,7 @@ async def test_generation_options_with_respond(model):
     assert response6 is not None
     assert (
         len(response6.split())
-        <= 4 # 4 words max. This is a simple check, actual tokenization may differ
+        <= 4  # 4 words max. This is a simple check, actual tokenization may differ
     )
     assert isinstance(response6, str)
     print(f"✓ Response with max tokens: {response6[:50]}")
@@ -352,9 +342,7 @@ def test_session_from_transcript_with_tools(model):
 
     print("\n2. Creating session from transcript with custom tools...")
     tools: list[fm.Tool] = [SearchBreadDatabaseTool()]
-    session = fm.LanguageModelSession.from_transcript(
-        transcript, model=model, tools=tools
-    )
+    session = fm.LanguageModelSession.from_transcript(transcript, model=model, tools=tools)
     assert session is not None
     print("✓ Created LanguageModelSession from transcript with tools")
 
@@ -392,9 +380,7 @@ def test_session_from_transcript_no_model(model):
 
 def test_session_from_transcript_continue_conversation(model):
     """Test that a session created from transcript can continue the conversation."""
-    print(
-        "\n=== Testing LanguageModelSession.from_transcript can continue conversation ==="
-    )
+    print("\n=== Testing LanguageModelSession.from_transcript can continue conversation ===")
 
     # Load the basic test transcript
     with open("tests/vendor/apple_fm_sdk/tester_schemas/test_transcript.json", "r") as f:
@@ -426,9 +412,7 @@ def test_session_from_transcript_continue_conversation(model):
     updated_transcript = asyncio.run(session.transcript.to_dict())
     updated_entry_count = len(updated_transcript["transcript"]["entries"])
     assert updated_entry_count > initial_entry_count
-    print(
-        f"✓ Transcript updated from {initial_entry_count} to {updated_entry_count} entries"
-    )
+    print(f"✓ Transcript updated from {initial_entry_count} to {updated_entry_count} entries")
 
     print("\n✓ Continue conversation test passed!")
 

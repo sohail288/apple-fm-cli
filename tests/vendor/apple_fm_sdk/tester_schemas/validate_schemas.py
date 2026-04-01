@@ -1,8 +1,9 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
+from typing import Any, List
+
 import apple_fm_sdk as fm
-from typing import List, Any
 import tester_schemas.schemas as tester_schemas
 
 
@@ -62,9 +63,7 @@ def validate_hedgehog(hedgehog_data) -> bool:
         home = hedgehog_data.get("home")
         hobbies = hedgehog_data.get("hobbies")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(hedgehog_data)}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(hedgehog_data)}")
 
     # Validate name
     assert isinstance(name, str), f"name must be string, got {type(name)}"
@@ -117,7 +116,7 @@ def validate_person(person_data) -> bool:
         # Age is optional, so we need to check if it exists
         try:
             age = person_data.value(int, for_property="age")
-        except (KeyError, AttributeError):
+        except KeyError, AttributeError:
             age = None
         children = person_data.value(List[dict], for_property="children")
     elif isinstance(person_data, dict):
@@ -126,9 +125,7 @@ def validate_person(person_data) -> bool:
         age = person_data.get("age")
         children = person_data.get("children")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(person_data)}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(person_data)}")
 
     # Validate name (required)
     assert isinstance(name, str), f"name must be string, got {type(name)}"
@@ -141,9 +138,7 @@ def validate_person(person_data) -> bool:
 
     # Validate children (required)
     assert isinstance(children, list), f"children must be list, got {type(children)}"
-    assert len(children) <= 3, (
-        f"children must have at most 3 items, got {len(children)}"
-    )
+    assert len(children) <= 3, f"children must have at most 3 items, got {len(children)}"
     for i, child in enumerate(children):
         assert isinstance(child, dict), f"children[{i}] must be dict, got {type(child)}"
         # Recursively validate each child as a Person
@@ -224,9 +219,7 @@ def validate_age(age_data) -> bool:
         years = age_data.get("years")
         months = age_data.get("months")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(age_data)}: {age_data}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(age_data)}: {age_data}")
 
     # Validate years (required)
     assert isinstance(years, int), f"years must be int, got {type(years)}"
@@ -262,9 +255,7 @@ def validate_shelter(shelter_data) -> bool:
         # Extract from dict
         cats = shelter_data.get("cats")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(shelter_data)}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(shelter_data)}")
 
     # Validate cats (required)
     assert isinstance(cats, list), f"cats must be list, got {type(cats)}"
@@ -309,16 +300,12 @@ def validate_pet_club(pet_club_data) -> bool:
         otherPets = pet_club_data.get("otherPets")
         presidentName = pet_club_data.get("presidentName")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(pet_club_data)}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(pet_club_data)}")
 
     # Validate members (required)
     assert isinstance(members, list), f"members must be list, got {type(members)}"
     for i, member in enumerate(members):
-        assert isinstance(member, dict), (
-            f"members[{i}] must be dict, got {type(member)}"
-        )
+        assert isinstance(member, dict), f"members[{i}] must be dict, got {type(member)}"
         # Recursively validate each member as a Person
         validate_person(member)
 
@@ -332,9 +319,7 @@ def validate_pet_club(pet_club_data) -> bool:
     # Validate hedgehogs (required)
     assert isinstance(hedgehogs, list), f"hedgehogs must be list, got {type(hedgehogs)}"
     for i, hedgehog in enumerate(hedgehogs):
-        assert isinstance(hedgehog, dict), (
-            f"hedgehogs[{i}] must be dict, got {type(hedgehog)}"
-        )
+        assert isinstance(hedgehog, dict), f"hedgehogs[{i}] must be dict, got {type(hedgehog)}"
         # Recursively validate each hedgehog
         validate_hedgehog(hedgehog)
 
@@ -377,33 +362,27 @@ def validate_newsletter(newsletter_data) -> bool:
         # Optional fields
         try:
             sponsor = newsletter_data.value(str, for_property="sponsor")
-        except (KeyError, AttributeError):
+        except KeyError, AttributeError:
             sponsor = None
         try:
             issueNumber = newsletter_data.value(int, for_property="issueNumber")
-        except (KeyError, AttributeError):
+        except KeyError, AttributeError:
             issueNumber = None
         try:
             tags = newsletter_data.value(List[str], for_property="tags")
-        except (KeyError, AttributeError):
+        except KeyError, AttributeError:
             tags = None
         try:
-            featuredCats = newsletter_data.value(
-                List[dict], for_property="featuredCats"
-            )
-        except (KeyError, AttributeError):
+            featuredCats = newsletter_data.value(List[dict], for_property="featuredCats")
+        except KeyError, AttributeError:
             featuredCats = None
         try:
-            featuredHedgehog = newsletter_data.value(
-                dict, for_property="featuredHedgehog"
-            )
-        except (KeyError, AttributeError):
+            featuredHedgehog = newsletter_data.value(dict, for_property="featuredHedgehog")
+        except KeyError, AttributeError:
             featuredHedgehog = None
         try:
-            featuredStaff = newsletter_data.value(
-                List[dict], for_property="featuredStaff"
-            )
-        except (KeyError, AttributeError):
+            featuredStaff = newsletter_data.value(List[dict], for_property="featuredStaff")
+        except KeyError, AttributeError:
             featuredStaff = None
     elif isinstance(newsletter_data, dict):
         # Extract from dict
@@ -416,9 +395,7 @@ def validate_newsletter(newsletter_data) -> bool:
         featuredHedgehog = newsletter_data.get("featuredHedgehog")
         featuredStaff = newsletter_data.get("featuredStaff")
     else:
-        raise AssertionError(
-            f"Expected GeneratedContent or dict, got {type(newsletter_data)}"
-        )
+        raise AssertionError(f"Expected GeneratedContent or dict, got {type(newsletter_data)}")
 
     # Validate title (required)
     assert isinstance(title, str), f"title must be string, got {type(title)}"
@@ -434,9 +411,7 @@ def validate_newsletter(newsletter_data) -> bool:
 
     # Validate issueNumber (optional)
     if issueNumber is not None:
-        assert isinstance(issueNumber, int), (
-            f"issueNumber must be int, got {type(issueNumber)}"
-        )
+        assert isinstance(issueNumber, int), f"issueNumber must be int, got {type(issueNumber)}"
 
     # Validate tags (optional)
     if tags is not None:
@@ -450,9 +425,7 @@ def validate_newsletter(newsletter_data) -> bool:
             f"featuredCats must be list, got {type(featuredCats)}"
         )
         for i, cat in enumerate(featuredCats):
-            assert isinstance(cat, dict), (
-                f"featuredCats[{i}] must be dict, got {type(cat)}"
-            )
+            assert isinstance(cat, dict), f"featuredCats[{i}] must be dict, got {type(cat)}"
             # Recursively validate each cat
             validate_cat(cat)
 
@@ -470,9 +443,7 @@ def validate_newsletter(newsletter_data) -> bool:
             f"featuredStaff must be list, got {type(featuredStaff)}"
         )
         for i, staff in enumerate(featuredStaff):
-            assert isinstance(staff, dict), (
-                f"featuredStaff[{i}] must be dict, got {type(staff)}"
-            )
+            assert isinstance(staff, dict), f"featuredStaff[{i}] must be dict, got {type(staff)}"
             # Recursively validate each staff member as a Person
             validate_person(staff)
 

@@ -3,6 +3,7 @@
 
 import asyncio
 import json
+
 import apple_fm_sdk as fm
 
 # =============================================================================
@@ -239,10 +240,7 @@ class SearchBreadDatabaseTool(fm.Tool):
         # Search for matching recipes
         results = []
         for key, recipe in bread_recipes.items():
-            if (
-                search_term.lower() in key.lower()
-                or search_term.lower() in recipe["name"].lower()
-            ):
+            if search_term.lower() in key.lower() or search_term.lower() in recipe["name"].lower():
                 results.append(recipe)
             if len(results) >= limit:
                 break

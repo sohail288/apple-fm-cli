@@ -5,20 +5,20 @@
 Test Foundation Models guided generation
 """
 
-import apple_fm_sdk as fm
 import pytest
-
 import tester_schemas.schemas as tester_schemas
 from conftest import assert_schema_properties
 from tester_schemas.validate_schemas import (
     validate_age,
     validate_cat,
     validate_hedgehog,
-    validate_person,
-    validate_shelter,
-    validate_pet_club,
     validate_newsletter,
+    validate_person,
+    validate_pet_club,
+    validate_shelter,
 )
+
+import apple_fm_sdk as fm
 
 
 @pytest.mark.asyncio
@@ -34,9 +34,7 @@ async def test_age_generable(model):
         "Generate an age for an elderly cat",
         generating=tester_schemas.Age,
     )
-    assert type(result) is tester_schemas.Age, (
-        f"✗ Invalid generated content type: {type(result)}"
-    )
+    assert type(result) is tester_schemas.Age, f"✗ Invalid generated content type: {type(result)}"
 
     # Validate the structured results
     print(f"✓ Got structured result: {type(result).__name__}")
@@ -61,9 +59,7 @@ async def test_cat_generable(model):
         "Generate a friendly kitten who loves playing fetch.",
         generating=tester_schemas.Cat,
     )
-    assert type(result) is tester_schemas.Cat, (
-        f"✗ Invalid generated content type: {type(result)}"
-    )
+    assert type(result) is tester_schemas.Cat, f"✗ Invalid generated content type: {type(result)}"
 
     # Validate the structured results
     print(f"✓ Got structured result: {type(result).__name__}")
@@ -77,17 +73,13 @@ async def test_cat_generable(model):
 @pytest.mark.asyncio
 async def test_hedgehog_generable(model):
     """Test using Hedgehog Generable class with complex generation guides."""
-    print(
-        "\n=== Testing Hedgehog Generable: complex guides (range, anyOf, constant, count) ==="
-    )
+    print("\n=== Testing Hedgehog Generable: complex guides (range, anyOf, constant, count) ===")
     schema: fm.GenerationSchema = tester_schemas.Hedgehog.generation_schema()
     assert isinstance(schema, fm.GenerationSchema), "Invalid schema"
     print(f"GenerationSchema is {schema.type_class}: {schema.description}")
 
     # Check schema correctly converts to Foundation Models Generable JSON Schema
-    assert_schema_properties(
-        schema, "Hedgehog", ["name", "age", "favoriteFood", "home", "hobbies"]
-    )
+    assert_schema_properties(schema, "Hedgehog", ["name", "age", "favoriteFood", "home", "hobbies"])
 
     session = fm.LanguageModelSession(model=model)
 
@@ -173,9 +165,7 @@ async def test_shelter_generable(model):
 @pytest.mark.asyncio
 async def test_pet_club_generable(model):
     """Test using PetClub Generable class with multiple nested object types."""
-    print(
-        "\n=== Testing PetClub Generable: Complex schema with multiple nested object types ==="
-    )
+    print("\n=== Testing PetClub Generable: Complex schema with multiple nested object types ===")
     schema: fm.GenerationSchema = tester_schemas.PetClub.generation_schema()
     assert isinstance(schema, fm.GenerationSchema), "Invalid schema"
     print(f"GenerationSchema is {schema.type_class}: {schema.description}")
@@ -212,9 +202,7 @@ async def test_pet_club_generable(model):
 @pytest.mark.asyncio
 async def test_newsletter_generable(model):
     """Test using ShelterNewsletter Generable class with optional fields and nested objects."""
-    print(
-        "\n=== Testing ShelterNewsletter Generable: optional fields and nested objects ==="
-    )
+    print("\n=== Testing ShelterNewsletter Generable: optional fields and nested objects ===")
     schema: fm.GenerationSchema = tester_schemas.ShelterNewsletter.generation_schema()
     assert isinstance(schema, fm.GenerationSchema), "Invalid schema"
     print(f"GenerationSchema is {schema.type_class}: {schema.description}")

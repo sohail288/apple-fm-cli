@@ -27,7 +27,6 @@ del t
 del _int_types
 
 
-
 class UserString:
     def __init__(self, seq):
         if isinstance(seq, bytes):
@@ -333,7 +332,6 @@ class MutableString(UserString):
 
 
 class String(MutableString, ctypes.Union):
-
     _fields_ = [("raw", ctypes.POINTER(ctypes.c_char)), ("data", ctypes.c_char_p)]
 
     def __init__(self, obj=b""):
@@ -437,10 +435,11 @@ def ord_if_char(value):
     """
     return ord(value) if (isinstance(value, bytes) or isinstance(value, str)) else value
 
+
 # End preamble
 
 _libs = {}
-_libdirs = ['lib']
+_libdirs = ["lib"]
 
 # Begin loader
 
@@ -857,7 +856,7 @@ del loaderclass
 
 # End loader
 
-add_library_search_dirs([os.path.join(os.path.dirname(__file__), 'lib')])
+add_library_search_dirs([os.path.join(os.path.dirname(__file__), "lib")])
 
 # Begin libraries
 _libs["FoundationModels"] = load_library("FoundationModels")
@@ -867,53 +866,73 @@ _libs["FoundationModels"] = load_library("FoundationModels")
 
 # No modules
 
-FMTaskRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 13
+FMTaskRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 13
 
-FMSystemLanguageModelRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 14
+FMSystemLanguageModelRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 14
 
-FMLanguageModelSessionRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 15
+FMLanguageModelSessionRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 15
 
-FMLanguageModelSessionResponseStreamRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 16
+FMLanguageModelSessionResponseStreamRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 16
 
-FMGenerationSchemaRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 17
+FMGenerationSchemaRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 17
 
-FMGeneratedContentRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 18
+FMGeneratedContentRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 18
 
-FMGenerationSchemaPropertyRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 19
+FMGenerationSchemaPropertyRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 19
 
-FMBridgedToolRef = POINTER(None)# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 20
+FMBridgedToolRef = POINTER(
+    None
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 20
 
-FMLanguageModelSessionResponseCallback = CFUNCTYPE(UNCHECKED(None), c_int, String, c_size_t, POINTER(None))# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 23
+FMLanguageModelSessionResponseCallback = CFUNCTYPE(
+    UNCHECKED(None), c_int, String, c_size_t, POINTER(None)
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 23
 
-FMLanguageModelSessionStructuredResponseCallback = CFUNCTYPE(UNCHECKED(None), c_int, FMGeneratedContentRef, POINTER(None))# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 24
+FMLanguageModelSessionStructuredResponseCallback = CFUNCTYPE(
+    UNCHECKED(None), c_int, FMGeneratedContentRef, POINTER(None)
+)  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 24
 
-enum_anon_2 = c_int# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+enum_anon_2 = c_int  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-FMSystemLanguageModelUnavailableReasonAppleIntelligenceNotEnabled = 0# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+FMSystemLanguageModelUnavailableReasonAppleIntelligenceNotEnabled = 0  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-FMSystemLanguageModelUnavailableReasonDeviceNotEligible = 1# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+FMSystemLanguageModelUnavailableReasonDeviceNotEligible = 1  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-FMSystemLanguageModelUnavailableReasonModelNotReady = 2# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+FMSystemLanguageModelUnavailableReasonModelNotReady = 2  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-FMSystemLanguageModelUnavailableReasonUnknown = 0xFF# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+FMSystemLanguageModelUnavailableReasonUnknown = 0xFF  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-FMSystemLanguageModelUnavailableReason = enum_anon_2# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
+FMSystemLanguageModelUnavailableReason = enum_anon_2  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 33
 
-enum_anon_3 = c_int# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
+enum_anon_3 = c_int  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
 
-FMSystemLanguageModelUseCaseGeneral = 0# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
+FMSystemLanguageModelUseCaseGeneral = 0  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
 
-FMSystemLanguageModelUseCaseContentTagging = 1# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
+FMSystemLanguageModelUseCaseContentTagging = 1  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
 
-FMSystemLanguageModelUseCase = enum_anon_3# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
+FMSystemLanguageModelUseCase = enum_anon_3  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 40
 
-enum_anon_4 = c_int# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
+enum_anon_4 = c_int  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
 
-FMSystemLanguageModelGuardrailsDefault = 0# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
+FMSystemLanguageModelGuardrailsDefault = 0  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
 
-FMSystemLanguageModelGuardrailsPermissiveContentTransformations = 1# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
+FMSystemLanguageModelGuardrailsPermissiveContentTransformations = 1  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
 
-FMSystemLanguageModelGuardrails = enum_anon_4# /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
+FMSystemLanguageModelGuardrails = enum_anon_4  # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 47
 
 # /Users/sohail/.cache/uv/git-v0/checkouts/9730a566a4389a3d/8d56a2d/foundation-models-c/Sources/FoundationModelsCBindings/include/FoundationModels.h: 50
 for _lib in _libs.values():
@@ -929,7 +948,10 @@ for _lib in _libs.values():
     if not _lib.has("FMSystemLanguageModelCreate", "cdecl"):
         continue
     FMSystemLanguageModelCreate = _lib.get("FMSystemLanguageModelCreate", "cdecl")
-    FMSystemLanguageModelCreate.argtypes = [FMSystemLanguageModelUseCase, FMSystemLanguageModelGuardrails]
+    FMSystemLanguageModelCreate.argtypes = [
+        FMSystemLanguageModelUseCase,
+        FMSystemLanguageModelGuardrails,
+    ]
     FMSystemLanguageModelCreate.restype = FMSystemLanguageModelRef
     break
 
@@ -938,7 +960,10 @@ for _lib in _libs.values():
     if not _lib.has("FMSystemLanguageModelIsAvailable", "cdecl"):
         continue
     FMSystemLanguageModelIsAvailable = _lib.get("FMSystemLanguageModelIsAvailable", "cdecl")
-    FMSystemLanguageModelIsAvailable.argtypes = [FMSystemLanguageModelRef, POINTER(FMSystemLanguageModelUnavailableReason)]
+    FMSystemLanguageModelIsAvailable.argtypes = [
+        FMSystemLanguageModelRef,
+        POINTER(FMSystemLanguageModelUnavailableReason),
+    ]
     FMSystemLanguageModelIsAvailable.restype = c_bool
     break
 
@@ -972,8 +997,15 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionCreateFromSystemLanguageModel", "cdecl"):
         continue
-    FMLanguageModelSessionCreateFromSystemLanguageModel = _lib.get("FMLanguageModelSessionCreateFromSystemLanguageModel", "cdecl")
-    FMLanguageModelSessionCreateFromSystemLanguageModel.argtypes = [FMSystemLanguageModelRef, String, POINTER(FMBridgedToolRef), c_int]
+    FMLanguageModelSessionCreateFromSystemLanguageModel = _lib.get(
+        "FMLanguageModelSessionCreateFromSystemLanguageModel", "cdecl"
+    )
+    FMLanguageModelSessionCreateFromSystemLanguageModel.argtypes = [
+        FMSystemLanguageModelRef,
+        String,
+        POINTER(FMBridgedToolRef),
+        c_int,
+    ]
     FMLanguageModelSessionCreateFromSystemLanguageModel.restype = FMLanguageModelSessionRef
     break
 
@@ -981,8 +1013,15 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionCreateFromTranscript", "cdecl"):
         continue
-    FMLanguageModelSessionCreateFromTranscript = _lib.get("FMLanguageModelSessionCreateFromTranscript", "cdecl")
-    FMLanguageModelSessionCreateFromTranscript.argtypes = [FMLanguageModelSessionRef, FMSystemLanguageModelRef, POINTER(FMBridgedToolRef), c_int]
+    FMLanguageModelSessionCreateFromTranscript = _lib.get(
+        "FMLanguageModelSessionCreateFromTranscript", "cdecl"
+    )
+    FMLanguageModelSessionCreateFromTranscript.argtypes = [
+        FMLanguageModelSessionRef,
+        FMSystemLanguageModelRef,
+        POINTER(FMBridgedToolRef),
+        c_int,
+    ]
     FMLanguageModelSessionCreateFromTranscript.restype = FMLanguageModelSessionRef
     break
 
@@ -1009,7 +1048,13 @@ for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionRespond", "cdecl"):
         continue
     FMLanguageModelSessionRespond = _lib.get("FMLanguageModelSessionRespond", "cdecl")
-    FMLanguageModelSessionRespond.argtypes = [FMLanguageModelSessionRef, String, String, POINTER(None), FMLanguageModelSessionResponseCallback]
+    FMLanguageModelSessionRespond.argtypes = [
+        FMLanguageModelSessionRef,
+        String,
+        String,
+        POINTER(None),
+        FMLanguageModelSessionResponseCallback,
+    ]
     FMLanguageModelSessionRespond.restype = FMTaskRef
     break
 
@@ -1026,8 +1071,14 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionResponseStreamIterate", "cdecl"):
         continue
-    FMLanguageModelSessionResponseStreamIterate = _lib.get("FMLanguageModelSessionResponseStreamIterate", "cdecl")
-    FMLanguageModelSessionResponseStreamIterate.argtypes = [FMLanguageModelSessionResponseStreamRef, POINTER(None), FMLanguageModelSessionResponseCallback]
+    FMLanguageModelSessionResponseStreamIterate = _lib.get(
+        "FMLanguageModelSessionResponseStreamIterate", "cdecl"
+    )
+    FMLanguageModelSessionResponseStreamIterate.argtypes = [
+        FMLanguageModelSessionResponseStreamRef,
+        POINTER(None),
+        FMLanguageModelSessionResponseCallback,
+    ]
     FMLanguageModelSessionResponseStreamIterate.restype = None
     break
 
@@ -1044,8 +1095,14 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionGetTranscriptJSONString", "cdecl"):
         continue
-    FMLanguageModelSessionGetTranscriptJSONString = _lib.get("FMLanguageModelSessionGetTranscriptJSONString", "cdecl")
-    FMLanguageModelSessionGetTranscriptJSONString.argtypes = [FMLanguageModelSessionRef, POINTER(c_int), POINTER(POINTER(c_char))]
+    FMLanguageModelSessionGetTranscriptJSONString = _lib.get(
+        "FMLanguageModelSessionGetTranscriptJSONString", "cdecl"
+    )
+    FMLanguageModelSessionGetTranscriptJSONString.argtypes = [
+        FMLanguageModelSessionRef,
+        POINTER(c_int),
+        POINTER(POINTER(c_char)),
+    ]
     if sizeof(c_int) == sizeof(c_void_p):
         FMLanguageModelSessionGetTranscriptJSONString.restype = ReturnString
     else:
@@ -1075,8 +1132,15 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddAnyOfGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddAnyOfGuide = _lib.get("FMGenerationSchemaPropertyAddAnyOfGuide", "cdecl")
-    FMGenerationSchemaPropertyAddAnyOfGuide.argtypes = [FMGenerationSchemaPropertyRef, POINTER(POINTER(c_char)), c_int, c_bool]
+    FMGenerationSchemaPropertyAddAnyOfGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddAnyOfGuide", "cdecl"
+    )
+    FMGenerationSchemaPropertyAddAnyOfGuide.argtypes = [
+        FMGenerationSchemaPropertyRef,
+        POINTER(POINTER(c_char)),
+        c_int,
+        c_bool,
+    ]
     FMGenerationSchemaPropertyAddAnyOfGuide.restype = None
     break
 
@@ -1084,8 +1148,14 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddCountGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddCountGuide = _lib.get("FMGenerationSchemaPropertyAddCountGuide", "cdecl")
-    FMGenerationSchemaPropertyAddCountGuide.argtypes = [FMGenerationSchemaPropertyRef, c_int, c_bool]
+    FMGenerationSchemaPropertyAddCountGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddCountGuide", "cdecl"
+    )
+    FMGenerationSchemaPropertyAddCountGuide.argtypes = [
+        FMGenerationSchemaPropertyRef,
+        c_int,
+        c_bool,
+    ]
     FMGenerationSchemaPropertyAddCountGuide.restype = None
     break
 
@@ -1093,8 +1163,14 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddMaximumGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddMaximumGuide = _lib.get("FMGenerationSchemaPropertyAddMaximumGuide", "cdecl")
-    FMGenerationSchemaPropertyAddMaximumGuide.argtypes = [FMGenerationSchemaPropertyRef, c_double, c_bool]
+    FMGenerationSchemaPropertyAddMaximumGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddMaximumGuide", "cdecl"
+    )
+    FMGenerationSchemaPropertyAddMaximumGuide.argtypes = [
+        FMGenerationSchemaPropertyRef,
+        c_double,
+        c_bool,
+    ]
     FMGenerationSchemaPropertyAddMaximumGuide.restype = None
     break
 
@@ -1102,8 +1178,14 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddMinimumGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddMinimumGuide = _lib.get("FMGenerationSchemaPropertyAddMinimumGuide", "cdecl")
-    FMGenerationSchemaPropertyAddMinimumGuide.argtypes = [FMGenerationSchemaPropertyRef, c_double, c_bool]
+    FMGenerationSchemaPropertyAddMinimumGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddMinimumGuide", "cdecl"
+    )
+    FMGenerationSchemaPropertyAddMinimumGuide.argtypes = [
+        FMGenerationSchemaPropertyRef,
+        c_double,
+        c_bool,
+    ]
     FMGenerationSchemaPropertyAddMinimumGuide.restype = None
     break
 
@@ -1111,7 +1193,9 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddMinItemsGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddMinItemsGuide = _lib.get("FMGenerationSchemaPropertyAddMinItemsGuide", "cdecl")
+    FMGenerationSchemaPropertyAddMinItemsGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddMinItemsGuide", "cdecl"
+    )
     FMGenerationSchemaPropertyAddMinItemsGuide.argtypes = [FMGenerationSchemaPropertyRef, c_int]
     FMGenerationSchemaPropertyAddMinItemsGuide.restype = None
     break
@@ -1120,7 +1204,9 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddMaxItemsGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddMaxItemsGuide = _lib.get("FMGenerationSchemaPropertyAddMaxItemsGuide", "cdecl")
+    FMGenerationSchemaPropertyAddMaxItemsGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddMaxItemsGuide", "cdecl"
+    )
     FMGenerationSchemaPropertyAddMaxItemsGuide.argtypes = [FMGenerationSchemaPropertyRef, c_int]
     FMGenerationSchemaPropertyAddMaxItemsGuide.restype = None
     break
@@ -1129,8 +1215,15 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaPropertyAddRangeGuide", "cdecl"):
         continue
-    FMGenerationSchemaPropertyAddRangeGuide = _lib.get("FMGenerationSchemaPropertyAddRangeGuide", "cdecl")
-    FMGenerationSchemaPropertyAddRangeGuide.argtypes = [FMGenerationSchemaPropertyRef, c_double, c_double, c_bool]
+    FMGenerationSchemaPropertyAddRangeGuide = _lib.get(
+        "FMGenerationSchemaPropertyAddRangeGuide", "cdecl"
+    )
+    FMGenerationSchemaPropertyAddRangeGuide.argtypes = [
+        FMGenerationSchemaPropertyRef,
+        c_double,
+        c_double,
+        c_bool,
+    ]
     FMGenerationSchemaPropertyAddRangeGuide.restype = None
     break
 
@@ -1166,7 +1259,11 @@ for _lib in _libs.values():
     if not _lib.has("FMGenerationSchemaGetJSONString", "cdecl"):
         continue
     FMGenerationSchemaGetJSONString = _lib.get("FMGenerationSchemaGetJSONString", "cdecl")
-    FMGenerationSchemaGetJSONString.argtypes = [FMGenerationSchemaRef, POINTER(c_int), POINTER(POINTER(c_char))]
+    FMGenerationSchemaGetJSONString.argtypes = [
+        FMGenerationSchemaRef,
+        POINTER(c_int),
+        POINTER(POINTER(c_char)),
+    ]
     if sizeof(c_int) == sizeof(c_void_p):
         FMGenerationSchemaGetJSONString.restype = ReturnString
     else:
@@ -1201,7 +1298,12 @@ for _lib in _libs.values():
     if not _lib.has("FMGeneratedContentGetPropertyValue", "cdecl"):
         continue
     FMGeneratedContentGetPropertyValue = _lib.get("FMGeneratedContentGetPropertyValue", "cdecl")
-    FMGeneratedContentGetPropertyValue.argtypes = [FMGeneratedContentRef, String, POINTER(c_int), POINTER(POINTER(c_char))]
+    FMGeneratedContentGetPropertyValue.argtypes = [
+        FMGeneratedContentRef,
+        String,
+        POINTER(c_int),
+        POINTER(POINTER(c_char)),
+    ]
     if sizeof(c_int) == sizeof(c_void_p):
         FMGeneratedContentGetPropertyValue.restype = ReturnString
     else:
@@ -1222,8 +1324,17 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionRespondWithSchema", "cdecl"):
         continue
-    FMLanguageModelSessionRespondWithSchema = _lib.get("FMLanguageModelSessionRespondWithSchema", "cdecl")
-    FMLanguageModelSessionRespondWithSchema.argtypes = [FMLanguageModelSessionRef, String, FMGenerationSchemaRef, String, POINTER(None), FMLanguageModelSessionStructuredResponseCallback]
+    FMLanguageModelSessionRespondWithSchema = _lib.get(
+        "FMLanguageModelSessionRespondWithSchema", "cdecl"
+    )
+    FMLanguageModelSessionRespondWithSchema.argtypes = [
+        FMLanguageModelSessionRef,
+        String,
+        FMGenerationSchemaRef,
+        String,
+        POINTER(None),
+        FMLanguageModelSessionStructuredResponseCallback,
+    ]
     FMLanguageModelSessionRespondWithSchema.restype = FMTaskRef
     break
 
@@ -1231,8 +1342,17 @@ for _lib in _libs.values():
 for _lib in _libs.values():
     if not _lib.has("FMLanguageModelSessionRespondWithSchemaFromJSON", "cdecl"):
         continue
-    FMLanguageModelSessionRespondWithSchemaFromJSON = _lib.get("FMLanguageModelSessionRespondWithSchemaFromJSON", "cdecl")
-    FMLanguageModelSessionRespondWithSchemaFromJSON.argtypes = [FMLanguageModelSessionRef, String, String, String, POINTER(None), FMLanguageModelSessionStructuredResponseCallback]
+    FMLanguageModelSessionRespondWithSchemaFromJSON = _lib.get(
+        "FMLanguageModelSessionRespondWithSchemaFromJSON", "cdecl"
+    )
+    FMLanguageModelSessionRespondWithSchemaFromJSON.argtypes = [
+        FMLanguageModelSessionRef,
+        String,
+        String,
+        String,
+        POINTER(None),
+        FMLanguageModelSessionStructuredResponseCallback,
+    ]
     FMLanguageModelSessionRespondWithSchemaFromJSON.restype = FMTaskRef
     break
 
@@ -1241,7 +1361,14 @@ for _lib in _libs.values():
     if not _lib.has("FMBridgedToolCreate", "cdecl"):
         continue
     FMBridgedToolCreate = _lib.get("FMBridgedToolCreate", "cdecl")
-    FMBridgedToolCreate.argtypes = [String, String, FMGenerationSchemaRef, CFUNCTYPE(UNCHECKED(None), FMGeneratedContentRef, c_uint), POINTER(c_int), POINTER(POINTER(c_char))]
+    FMBridgedToolCreate.argtypes = [
+        String,
+        String,
+        FMGenerationSchemaRef,
+        CFUNCTYPE(UNCHECKED(None), FMGeneratedContentRef, c_uint),
+        POINTER(c_int),
+        POINTER(POINTER(c_char)),
+    ]
     FMBridgedToolCreate.restype = FMBridgedToolRef
     break
 
@@ -1293,4 +1420,3 @@ for _lib in _libs.values():
 # No inserted files
 
 # No prefix-stripping
-

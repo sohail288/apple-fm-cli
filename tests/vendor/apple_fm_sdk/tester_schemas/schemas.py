@@ -1,8 +1,9 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-import apple_fm_sdk as fm
 from typing import List, Optional
+
+import apple_fm_sdk as fm
 
 # These are the exact same schemas as in tests/tester_schemas/schemas.swift,
 # but expressed in Python syntax. They are used to test schema generation
@@ -46,9 +47,7 @@ class Shelter:
 @fm.generable()
 class Person:
     age: Optional[int] = fm.guide(range=(18, 100))
-    children: List["Person"] = fm.guide(
-        description="The person's children", max_items=3
-    )
+    children: List["Person"] = fm.guide(description="The person's children", max_items=3)
     name: str = fm.guide(description="The person's name")
 
 
@@ -59,9 +58,7 @@ class PetClub:
     cats: list["Cat"]
     hedgehogs: list["Hedgehog"]
     otherPets: list[str]
-    presidentName: str = fm.guide(
-        description="Should be the name of one of the members"
-    )
+    presidentName: str = fm.guide(description="Should be the name of one of the members")
 
 
 # An extra-complex example with optional properties
@@ -73,9 +70,7 @@ class ShelterNewsletter:
         description="A local company that's sponsoring this newsletter, if applicable"
     )
     issueNumber: Optional[int]
-    tags: Optional[List[str]] = fm.guide(
-        description="Search keywords for this newsletter"
-    )
+    tags: Optional[List[str]] = fm.guide(description="Search keywords for this newsletter")
     featuredCats: Optional[List[Cat]]
     featuredHedgehog: Optional[Hedgehog]
     featuredStaff: Optional[List["Person"]]

@@ -6,6 +6,7 @@ Tests for SystemLanguageModel functionality.
 """
 
 import pytest
+
 import apple_fm_sdk as fm
 
 
@@ -19,9 +20,9 @@ def test_import_systemlanguagemodel():
 
     from apple_fm_sdk import (
         SystemLanguageModel,  # noqa: F401 expected unused import
-        SystemLanguageModelUseCase,  # noqa: F401 expected unused import
         SystemLanguageModelGuardrails,  # noqa: F401 expected unused import
         SystemLanguageModelUnavailableReason,  # noqa: F401 expected unused import
+        SystemLanguageModelUseCase,  # noqa: F401 expected unused import
     )
 
     print("✓ Successfully imported SystemLanguageModel classes and enums")
@@ -85,9 +86,7 @@ async def test_custom_model():
     print("✓ Successfully created session with custom model")
 
     # Test a simple response
-    response = await session.respond(
-        "Tag this content: A beautiful sunset over the mountains"
-    )
+    response = await session.respond("Tag this content: A beautiful sunset over the mountains")
     print(f"✓ Custom model response: {response[:100]}...")
 
     assert len(response) > 0, "Response should not be empty"
@@ -107,6 +106,4 @@ async def test_invalid_use_case():
         guardrails=fm.SystemLanguageModelGuardrails.DEFAULT,
     )
 
-    assert custom_model.is_available()[0], (
-        "Model should be available despite invalid use case"
-    )
+    assert custom_model.is_available()[0], "Model should be available despite invalid use case"

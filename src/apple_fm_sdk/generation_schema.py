@@ -1,13 +1,13 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-from typing import List, Optional, Type, Any
-from .generation_property import Property
-from .c_helpers import _ManagedObject, _get_error_string
 import ctypes
 import json
-from .errors import _status_code_to_exception
+from typing import Any, List, Optional, Type
 
+from .c_helpers import _get_error_string, _ManagedObject
+from .errors import _status_code_to_exception
+from .generation_property import Property
 
 CPointer = ctypes._Pointer
 
@@ -163,9 +163,7 @@ class GenerationSchema(_ManagedObject):
             specification used by the Swift API.
         """
         error_code = ctypes.c_int32()  # C error status code
-        error_description = ctypes.POINTER(
-            ctypes.c_char
-        )()  # C error description pointer
+        error_description = ctypes.POINTER(ctypes.c_char)()  # C error description pointer
 
         jsn_string = lib.FMGenerationSchemaGetJSONString(
             self._ptr,
@@ -174,9 +172,7 @@ class GenerationSchema(_ManagedObject):
         )
 
         # Check if we got a valid result or an error
-        if jsn_string is None or (
-            hasattr(jsn_string, "data") and jsn_string.data is None
-        ):
+        if jsn_string is None or (hasattr(jsn_string, "data") and jsn_string.data is None):
             # An error occurred, raise appropriate exception
             err_code, err_desc = _get_error_string(error_code, error_description)
             error_msg = "Failed to serialize GenerationSchema"
@@ -191,9 +187,7 @@ class GenerationSchema(_ManagedObject):
 
         # Check if we got an empty string (which indicates an error)
         if not json_str or json_str.strip() == "":
-            raise ValueError(
-                "Failed to serialize GenerationSchema: empty JSON string returned"
-            )
+            raise ValueError("Failed to serialize GenerationSchema: empty JSON string returned")
 
         result = json.loads(json_str)
         return result

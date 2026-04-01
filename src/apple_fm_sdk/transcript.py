@@ -1,12 +1,11 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-import json
 import ctypes
+import json
 
-from apple_fm_sdk.errors import _status_code_to_exception
 from apple_fm_sdk.c_helpers import _get_error_string
-
+from apple_fm_sdk.errors import _status_code_to_exception
 
 try:
     from . import _ctypes_bindings as lib
@@ -201,17 +200,13 @@ class Transcript:
             - Call this function again to get an updated transcript after new interactions
         """
         error_code = ctypes.c_int32()  # C error status code
-        error_description = ctypes.POINTER(
-            ctypes.c_char
-        )()  # C error description pointer
+        error_description = ctypes.POINTER(ctypes.c_char)()  # C error description pointer
         jsn_string = lib.FMLanguageModelSessionGetTranscriptJSONString(
             self.session_ptr, ctypes.byref(error_code), ctypes.byref(error_description)
         )
 
         # Check if we got a valid result or an error
-        if jsn_string is None or (
-            hasattr(jsn_string, "data") and jsn_string.data is None
-        ):
+        if jsn_string is None or (hasattr(jsn_string, "data") and jsn_string.data is None):
             # An error occurred, raise appropriate exception
             err_code, err_desc = _get_error_string(error_code, error_description)
             error_msg = "Failed to fetch session transcript"
@@ -301,9 +296,7 @@ class Transcript:
             - :class:`~apple_fm_sdk.tool.Tool`: For creating custom tools
         """
         error_code = ctypes.c_int32()  # C error status code
-        error_description = ctypes.POINTER(
-            ctypes.c_char
-        )()  # C error description pointer
+        error_description = ctypes.POINTER(ctypes.c_char)()  # C error description pointer
 
         # Create a session pointer initialized with the transcript data from the dictionary
         # We can't create transcript pointer directly, so we create a new session pointer that

@@ -8,7 +8,8 @@ This module provides the Property class for representing properties in generatio
 including their types, descriptions, and associated generation guides.
 """
 
-from typing import List, Optional, Any, Type
+from typing import Any, List, Optional, Type
+
 from .generation_guide import GenerationGuide
 from .type_conversion import (
     _python_type_to_string,

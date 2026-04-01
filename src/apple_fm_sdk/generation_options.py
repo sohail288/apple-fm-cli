@@ -1,9 +1,9 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-from typing import Optional
 from dataclasses import dataclass
 from enum import Enum
+from typing import Optional
 
 
 class SamplingModeType(str, Enum):

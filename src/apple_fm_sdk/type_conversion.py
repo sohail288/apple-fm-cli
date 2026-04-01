@@ -60,9 +60,7 @@ def _python_type_to_string(python_type: Type) -> str:
     elif python_type is bool:
         return "boolean"
     elif python_type is list:  # No generic lists allowed
-        raise TypeError(
-            "Generic list types must specify an element type, for example, List[str]"
-        )
+        raise TypeError("Generic list types must specify an element type, for example, List[str]")
     elif hasattr(python_type, "__origin__"):
         if python_type.__origin__ is list:
             element_type = python_type.__args__[0] if python_type.__args__ else str
@@ -70,9 +68,7 @@ def _python_type_to_string(python_type: Type) -> str:
             return f"array<{element_type_str}>"
         elif python_type.__origin__ is Union:
             # Handle Optional[T] -> Union[T, None]
-            non_none_types = [
-                arg for arg in python_type.__args__ if arg is not type(None)
-            ]
+            non_none_types = [arg for arg in python_type.__args__ if arg is not type(None)]
             if len(non_none_types) == 1:
                 return _python_type_to_string(non_none_types[0])
 

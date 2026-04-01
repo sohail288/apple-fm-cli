@@ -11,7 +11,9 @@ to prevent trace trap errors when running async tests with pytest.
 import asyncio
 import gc
 import warnings
+
 import pytest
+
 import apple_fm_sdk as fm
 
 
@@ -197,7 +199,9 @@ def assert_schema_properties(schema: fm.GenerationSchema, title: str, properties
     jsn = schema.to_dict()
 
     # Validate title
-    assert jsn["title"] == title, f"Schema missing title, expected '{title}' got '{jsn.get('title')}'"
+    assert jsn["title"] == title, (
+        f"Schema missing title, expected '{title}' got '{jsn.get('title')}'"
+    )
 
     # Validate property count
     actual_count = len(jsn["properties"])
