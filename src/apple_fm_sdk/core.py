@@ -7,7 +7,7 @@ system foundation model access and configuration.
 
 The main classes provided are:
 
-* :class:`SystemLanguageModel` - Interface to the on-device foundation model used by Apple Intelligence
+* :class:`SystemLanguageModel` - Interface to the on-device model used by Apple Intelligence
 * :class:`SystemLanguageModelUseCase` - Enumeration of model use cases
 * :class:`SystemLanguageModelGuardrails` - Enumeration of guardrail settings
 * :class:`SystemLanguageModelUnavailableReason` - Enumeration of unavailability reasons
@@ -27,19 +27,19 @@ Example:
 import ctypes
 from ctypes import c_int
 from enum import IntEnum
-from typing import Optional
+from typing import Any
 
 from .c_helpers import (
     _ManagedObject,
 )
-from .errors import FoundationModelsError
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
-    )
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
+    ) from e
 
 
 class SystemLanguageModelUnavailableReason(IntEnum):
@@ -113,8 +113,8 @@ class SystemLanguageModel(_ManagedObject):
         self,
         use_case: SystemLanguageModelUseCase = SystemLanguageModelUseCase.GENERAL,
         guardrails: SystemLanguageModelGuardrails = SystemLanguageModelGuardrails.DEFAULT,
-        _ptr=None,
-    ):
+        _ptr: Any | None = None,
+    ) -> None:
         if _ptr is not None:
             super().__init__(_ptr)
         else:
@@ -123,7 +123,7 @@ class SystemLanguageModel(_ManagedObject):
 
     def is_available(
         self,
-    ) -> tuple[bool, Optional[SystemLanguageModelUnavailableReason]]:
+    ) -> tuple[bool, SystemLanguageModelUnavailableReason | None]:
         reason = c_int()
         is_available = lib.FMSystemLanguageModelIsAvailable(self._ptr, ctypes.byref(reason))
 

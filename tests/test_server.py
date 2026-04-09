@@ -1,4 +1,6 @@
 import json
+from collections.abc import AsyncGenerator, Generator
+from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -41,12 +43,12 @@ def event_names(body: str) -> list[str | None]:
     return [event for event, _ in parse_sse_events(body)]
 
 
-def last_session_instructions(mock_fm_sdk):
-    return mock_fm_sdk["session_ctor"].call_args.kwargs["instructions"]
+def last_session_instructions(mock_fm_sdk: dict[str, Any]) -> str | None:
+    return cast(str | None, mock_fm_sdk["session_ctor"].call_args.kwargs["instructions"])
 
 
 @pytest.fixture
-def mock_fm_sdk():
+def mock_fm_sdk() -> Generator[dict[str, Any]]:
     with (
         patch("apple_fm_sdk.SystemLanguageModel") as mock_model,
         patch("apple_fm_sdk.LanguageModelSession") as mock_session,
@@ -69,7 +71,7 @@ def mock_fm_sdk():
         }
 
 
-def test_chat_completions_basic(mock_fm_sdk):
+def test_chat_completions_basic(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="Hello world")
 
@@ -88,9 +90,9 @@ def test_chat_completions_basic(mock_fm_sdk):
     assert data["usage"]["completion_tokens"] > 0
 
 
-def test_chat_completions_streaming(mock_fm_sdk):
+def test_chat_completions_streaming(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
-    async def mock_stream(prompt):
+    async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "Hello "
         yield "Hello world"
 
@@ -109,12 +111,12 @@ def test_chat_completions_streaming(mock_fm_sdk):
     assert response.text.rstrip().endswith("data: [DONE]")
 
 
-def test_chat_completions_json_schema(mock_fm_sdk):
+def test_chat_completions_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     from dataclasses import make_dataclass
 
-    Cat = make_dataclass("Cat", [("name", str), ("age", int)])
-    mock_fm_sdk["session"].respond.return_value = Cat(name="Whiskers", age=3)
+    cat_cls = make_dataclass("Cat", [("name", str), ("age", int)])
+    mock_fm_sdk["session"].respond.return_value = cat_cls(name="Whiskers", age=3)
 
     # When
     response = client.post(
@@ -142,7 +144,7 @@ def test_chat_completions_json_schema(mock_fm_sdk):
     assert content["age"] == 3
 
 
-def test_responses_api_basic(mock_fm_sdk):
+def test_responses_api_basic(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2 + 2 equals 4.")
     mock_fm_sdk["session"].token_usage = AsyncMock(
@@ -164,9 +166,9 @@ def test_responses_api_basic(mock_fm_sdk):
     assert data["usage"]["total_tokens"] == 15
 
 
-def test_responses_api_streaming(mock_fm_sdk):
+def test_responses_api_streaming(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
-    async def mock_stream(prompt):
+    async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "The answer "
         yield "The answer is 4."
 
@@ -202,9 +204,11 @@ def test_responses_api_streaming(mock_fm_sdk):
     assert json.loads(completed_event[1])["type"] == "response.completed"
 
 
-def test_responses_api_streaming_deduplicates_multiline_snapshots(mock_fm_sdk):
+def test_responses_api_streaming_deduplicates_multiline_snapshots(
+    mock_fm_sdk: dict[str, Any],
+) -> None:
     # Given
-    async def mock_stream(prompt):
+    async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "Step 1\n"
         yield "Step 1\nStep 2\n"
         yield "Step 1\nStep 2\nStep 3"
@@ -233,10 +237,10 @@ def test_responses_api_streaming_deduplicates_multiline_snapshots(mock_fm_sdk):
 
 
 def test_responses_api_codex_interactive_streaming_keeps_deltas_and_includes_final_text_content(
-    mock_fm_sdk,
-):
+    mock_fm_sdk: dict[str, Any],
+) -> None:
     # Given
-    async def mock_stream(prompt):
+    async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "2"
 
     mock_fm_sdk["session"].stream_response = mock_stream
@@ -271,9 +275,11 @@ def test_responses_api_codex_interactive_streaming_keeps_deltas_and_includes_fin
     assert item_done["item"]["content"] == [{"type": "output_text", "text": "2"}]
 
 
-def test_responses_api_codex_exec_streaming_uses_final_item_content(mock_fm_sdk):
+def test_responses_api_codex_exec_streaming_uses_final_item_content(
+    mock_fm_sdk: dict[str, Any],
+) -> None:
     # Given
-    async def mock_stream(prompt):
+    async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "2"
 
     mock_fm_sdk["session"].stream_response = mock_stream
@@ -306,12 +312,12 @@ def test_responses_api_codex_exec_streaming_uses_final_item_content(mock_fm_sdk)
     assert completed["response"]["output"] == []
 
 
-def test_responses_api_json_schema(mock_fm_sdk):
+def test_responses_api_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     from dataclasses import make_dataclass
 
-    Cat = make_dataclass("Cat", [("name", str), ("age", int)])
-    mock_fm_sdk["session"].respond.return_value = Cat(name="Whiskers", age=3)
+    cat_cls = make_dataclass("Cat", [("name", str), ("age", int)])
+    mock_fm_sdk["session"].respond.return_value = cat_cls(name="Whiskers", age=3)
     mock_fm_sdk["session"].token_usage = AsyncMock(
         return_value={"total_tokens": 20, "prompt_tokens": 10, "completion_tokens": 10}
     )
@@ -345,7 +351,7 @@ def test_responses_api_json_schema(mock_fm_sdk):
     assert content["age"] == 3
 
 
-def test_responses_api_adapts_codex_instructions(mock_fm_sdk):
+def test_responses_api_adapts_codex_instructions(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2")
     codex_instructions = (
@@ -369,7 +375,7 @@ def test_responses_api_adapts_codex_instructions(mock_fm_sdk):
     assert mock_fm_sdk["session_ctor"].call_args.kwargs["model"] is not None
 
 
-def test_build_responses_prompt_preserves_codex_conversation_history():
+def test_build_responses_prompt_preserves_codex_conversation_history() -> None:
     # Given
     input_data = [
         {
@@ -407,7 +413,7 @@ def test_build_responses_prompt_preserves_codex_conversation_history():
     )
 
 
-def test_responses_api_preserves_regular_instructions(mock_fm_sdk):
+def test_responses_api_preserves_regular_instructions(mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2 + 2 equals 4.")
 
@@ -427,7 +433,7 @@ def test_responses_api_preserves_regular_instructions(mock_fm_sdk):
     assert mock_fm_sdk["session_ctor"].call_args.kwargs["model"] is None
 
 
-def test_build_responses_prompt_strips_environment_context_for_codex_mode():
+def test_build_responses_prompt_strips_environment_context_for_codex_mode() -> None:
     # Given
     input_data = [
         {

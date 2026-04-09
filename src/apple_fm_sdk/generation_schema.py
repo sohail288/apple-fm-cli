@@ -3,7 +3,7 @@
 
 import ctypes
 import json
-from typing import Any, List, Optional, Type
+from typing import Any, cast
 
 from .c_helpers import _get_error_string, _ManagedObject
 from .errors import _status_code_to_exception
@@ -13,8 +13,8 @@ CPointer = ctypes._Pointer
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
-    raise (ImportError("Python C bindings missing"))
+except ImportError as e:
+    raise ImportError("Python C bindings missing") from e
 
 
 class GenerationSchema(_ManagedObject):
@@ -51,20 +51,20 @@ class GenerationSchema(_ManagedObject):
         :class:`GenerationGuide` for constraining property values.
     """
 
-    type_class: Type
-    description: Optional[str] = None
-    properties: List[Property]
-    nested_schemas: List["GenerationSchema"] = []  # for nested definitions
-    _ptr: CPointer
+    type_class: type
+    description: str | None = None
+    properties: list[Property]
+    nested_schemas: list[GenerationSchema] = []  # for nested definitions
+    _ptr: "CPointer[Any]"
 
     def __init__(
         self,
-        type_class: Type,
-        description: Optional[str] = None,
-        properties: Optional[List[Property]] = None,
-        dynamic_nested_types: List["GenerationSchema"] = [],
-        _ptr=None,
-    ):
+        type_class: type,
+        description: str | None = None,
+        properties: list[Property] | None = None,
+        dynamic_nested_types: list[GenerationSchema] | None = None,
+        _ptr: Any = None,
+    ) -> None:
         """
         Initialize a GenerationSchema instance.
 
@@ -104,6 +104,8 @@ class GenerationSchema(_ManagedObject):
             The schema is automatically converted to its C representation for use
             with the underlying Foundation Models runtime.
         """
+        if dynamic_nested_types is None:
+            dynamic_nested_types = []
         self.type_class = type_class
         self.description = description
         self.properties = properties or []
@@ -120,8 +122,8 @@ class GenerationSchema(_ManagedObject):
             super().__init__(ptr)
 
             # Add referenced types to schema
-            for refType in self.dynamic_nested_types:
-                lib.FMGenerationSchemaAddReferenceSchema(ptr, refType._ptr)
+            for ref_type in self.dynamic_nested_types:
+                lib.FMGenerationSchemaAddReferenceSchema(ptr, ref_type._ptr)
 
             # Add properties to the schema
             for property in self.properties:  # Important! use self.properties here
@@ -190,4 +192,4 @@ class GenerationSchema(_ManagedObject):
             raise ValueError("Failed to serialize GenerationSchema: empty JSON string returned")
 
         result = json.loads(json_str)
-        return result
+        return cast(dict[str, Any], result)

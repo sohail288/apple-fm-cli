@@ -11,12 +11,12 @@ import apple_fm_sdk as fm
 
 
 def run_cli(installed_cli: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603
         [str(installed_cli), *args],
         capture_output=True,
         text=True,
         check=True,
-    )
+    )  # noqa: S603, S607
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -29,7 +29,7 @@ def check_fm_available() -> None:
 
 
 @pytest.fixture(scope="session")
-def installed_cli() -> Generator[Path, None, None]:
+def installed_cli() -> Generator[Path]:
     """
     Fixture to install the CLI into a temporary directory and return the path to the executable.
     """
@@ -40,7 +40,7 @@ def installed_cli() -> Generator[Path, None, None]:
 
         # Install the tool into the temporary directory using uv
         venv_dir = tmp_path / ".venv"
-        subprocess.run(["uv", "venv", str(venv_dir)], check=True, capture_output=True)
+        subprocess.run(["uv", "venv", str(venv_dir)], check=True, capture_output=True)  # noqa: S603, S607
 
         # Determine the python executable in the venv
         if os.name == "nt":
@@ -49,12 +49,12 @@ def installed_cli() -> Generator[Path, None, None]:
             cli_exe = venv_dir / "bin" / "apple-fm-cli"
 
         # Install the current project into the venv
-        subprocess.run(
-            ["uv", "pip", "install", ".", "--python", str(venv_dir)],
+        subprocess.run(  # noqa: S603, S607
+            ["uv", "pip", "install", ".", "--python", str(venv_dir)],  # noqa: S607
             check=True,
             cwd=Path(__file__).parent.parent,
             capture_output=True,
-        )
+        )  # noqa: S603, S607
 
         yield cli_exe
 

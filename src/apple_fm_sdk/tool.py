@@ -6,6 +6,7 @@ import ctypes
 import logging
 import threading
 from abc import ABC, abstractmethod
+from typing import Any
 
 from .c_helpers import _get_error_string, _ManagedObject
 from .errors import _status_code_to_exception
@@ -16,10 +17,11 @@ logger = logging.getLogger(__name__)
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
-    )
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
+    ) from e
 
 
 class Tool(_ManagedObject, ABC):
@@ -232,7 +234,8 @@ class Tool(_ManagedObject, ABC):
                     except Exception:
                         limit = 10
 
-                    # Perform async operation, for example, database search or another session call here
+                    # Perform async operation, for example, database search
+                    # or another session call here
 
                     return f"Results for '{query}' with limit {limit}"  # Placeholder response
 
@@ -243,7 +246,7 @@ class Tool(_ManagedObject, ABC):
         """
         pass
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Verify the subclass implementation
         self._verify_subclass_()
 
@@ -254,10 +257,10 @@ class Tool(_ManagedObject, ABC):
 
         # Create the C callback function type matching the bindings
         # UNCHECKED(None) in the bindings returns ctypes.c_void_p
-        CallbackType = ctypes.CFUNCTYPE(ctypes.c_void_p, lib.FMGeneratedContentRef, ctypes.c_uint)
+        callback_type = ctypes.CFUNCTYPE(ctypes.c_void_p, lib.FMGeneratedContentRef, ctypes.c_uint)
 
         # Create the actual callback function
-        def _c_callback_impl(content_ref, call_id):
+        def _c_callback_impl(content_ref: Any, call_id: int) -> None:
             """C callback that gets invoked when the tool is called."""
             try:
                 # Create GeneratedContent from the C pointer
@@ -266,7 +269,7 @@ class Tool(_ManagedObject, ABC):
                 generated_content = GeneratedContent(_ptr=content_ref)
 
                 # Run the async callable in a new task
-                async def _run_async_callable():
+                async def _run_async_callable() -> None:
                     try:
                         # Call the tool subclass's async function
                         result = await self._async_callable(generated_content)
@@ -292,7 +295,7 @@ class Tool(_ManagedObject, ABC):
                     asyncio.create_task(_run_async_callable())
                 except RuntimeError:
                     # No running loop - create a new thread with event loop
-                    def _run_in_thread():
+                    def _run_in_thread() -> None:
                         loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(loop)
                         try:
@@ -313,20 +316,23 @@ class Tool(_ManagedObject, ABC):
                     raise
 
         # Wrap the callback implementation with the callback type
-        _c_callback = CallbackType(_c_callback_impl)
+        _c_callback = callback_type(_c_callback_impl)
 
         # Store the callback to prevent garbage collection
         self._c_callback = _c_callback
 
-        # Initialize _ptr to None before calling super().__init__() to avoid AttributeError in __del__
+        # Initialize _ptr to None before calling super().__init__()
+        # to avoid AttributeError in __del__
         self._ptr = None
 
         # Create the bridged tool using the C API
         name_bytes = self.name.encode("utf-8")
         description_bytes = self.description.encode("utf-8")
 
-        # Store the schema to keep it alive (prevents deallocation before FMBridgedToolCreate completes)
-        # This is necessary because arguments_schema is a property that returns a new object each time
+        # Store the schema to keep it alive (prevents deallocation before
+        # FMBridgedToolCreate completes)
+        # This is necessary because arguments_schema is a property that
+        # returns a new object each time
         self._arguments_schema = self.arguments_schema
 
         # Prepare error handling parameters
@@ -352,7 +358,7 @@ class Tool(_ManagedObject, ABC):
 
         super().__init__(ptr)
 
-    def _verify_subclass_(self):
+    def _verify_subclass_(self) -> None:
         assert hasattr(self, "name"), "Tool subclass must have a 'name' property."
         assert hasattr(self, "description"), "Tool subclass must have a 'description' property."
         assert hasattr(self, "arguments_schema"), (

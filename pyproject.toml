@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 100
 target-version = "py314"
+exclude = ["tests/vendor", "src/apple_fm_sdk/_ctypes_bindings.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "ANN", "S", "PT"]
@@ -32,8 +33,10 @@ ignore = ["ANN101", "ANN102", "ANN401", "S101"]
 python_version = "3.14"
 strict = true
 ignore_missing_imports = true
+exclude = ["tests/vendor", "src/apple_fm_sdk/_ctypes_bindings.py"]
 
 [tool.pytest.ini_options]
+norecursedirs = ["tests/vendor"]
 markers = [
     "e2e: marks end-to-end tests (select with '-m e2e')"
 ]

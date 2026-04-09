@@ -2,12 +2,10 @@
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
-    Callable,
-    List,
-    Optional,
-    Type,
+    Any,
     Union,
     get_args,
     get_type_hints,
@@ -35,26 +33,26 @@ class GenerableDecoratorError(InvalidGenerationSchemaError):
 
 # Overload signatures for type checkers
 @overload
-def generable(arg: Type[object], /) -> Type[Generable]:
+def generable(arg: type[object], /) -> type[Generable]:
     """When used without parentheses: @generable"""
     ...
 
 
 @overload
-def generable(arg: None = ..., /) -> Callable[[Type[object]], Type[Generable]]:
+def generable(arg: None = ..., /) -> Callable[[type[object]], type[Generable]]:
     """When used with empty parentheses: @generable()"""
     ...
 
 
 @overload
-def generable(arg: str, /) -> Callable[[Type[object]], Type[Generable]]:
+def generable(arg: str, /) -> Callable[[type[object]], type[Generable]]:
     """When used with a description: @generable("description")"""
     ...
 
 
 def generable(
-    arg: Optional[Union[type, str]] = None,
-) -> Union[Type[Generable], Callable[[Type], Type[Generable]]]:
+    arg: type | str | None = None,
+) -> type[Generable] | Callable[[type], type[Generable]]:
     """
     Decorator that makes a class generable for use with Foundation Models.
 
@@ -145,7 +143,7 @@ def generable(
     return decorator
 
 
-def _apply_generable_decorator(cls: type, description: Optional[str]) -> type[Generable]:
+def _apply_generable_decorator(cls: type, description: str | None) -> type[Generable]:
     """
     Internal function that applies the generable transformation to a class.
 
@@ -200,7 +198,8 @@ def _apply_generable_decorator(cls: type, description: Optional[str]) -> type[Ge
             "  @fm.generable\n"
             f"  class {cls.__name__}:\n"
             "      name: str\n"
-            "      tags: list[str] = field(default_factory=list)  # Use field() for mutable defaults"
+            "      # Use field() for mutable defaults\n"
+            "      tags: list[str] = field(default_factory=list)"
         ) from e
 
     # Validate field types are supported
@@ -241,7 +240,8 @@ def _apply_generable_decorator(cls: type, description: Optional[str]) -> type[Ge
             f"Failed to create PartiallyGenerated class for '{cls.__name__}': {e}\n\n"
             "This is an internal error. Please ensure:\n"
             "  - All field types are properly annotated\n"
-            "  - Field types are serializable (str, int, float, bool, list, dict, or other @fm.generable types)\n"
+            "  - Field types are serializable (str, int, float, bool, list, "
+            "dict, or other @fm.generable types)\n"
             "  - No unsupported types like datetime, custom objects without @fm.generable, etc."
         ) from e
 
@@ -252,8 +252,8 @@ def _apply_generable_decorator(cls: type, description: Optional[str]) -> type[Ge
 
 
 def resolve_referenced_generables(
-    field_type, outer_class_name: str
-) -> Optional[List[GenerationSchema]]:
+    field_type: Any, outer_class_name: str
+) -> list[GenerationSchema] | None:
     """
     Resolve nested generable types referenced by a field.
 
@@ -288,8 +288,10 @@ def resolve_referenced_generables(
     for inner_type in get_args(field_type):
         return resolve_referenced_generables(inner_type, outer_class_name)
 
+    return None
 
-def generation_schema(cls_inner, description: Optional[str] = None) -> GenerationSchema:
+
+def generation_schema(cls_inner: Any, description: str | None = None) -> GenerationSchema:
     """
     Generate a GenerationSchema from a generable class.
 
@@ -361,7 +363,7 @@ def generation_schema(cls_inner, description: Optional[str] = None) -> Generatio
 
 
 # Add ConvertibleFromGeneratedContent support
-def _from_generated_content(cls_inner, content: GeneratedContent):
+def _from_generated_content(cls_inner: Any, content: GeneratedContent) -> Any:
     """Create instance from GeneratedContent."""
     kwargs = {}
     type_hints = get_type_hints(cls_inner)
@@ -375,17 +377,19 @@ def _from_generated_content(cls_inner, content: GeneratedContent):
             raise ValueError(
                 f"Failed to convert GeneratedContent to {cls_inner.__name__}: "
                 f"could not set field '{field_name}' with error: {error}"
-            )
+            ) from error
 
     return cls_inner(**kwargs)
 
 
 # Add ConvertibleToGeneratedContent support
-def generated_content(self) -> GeneratedContent:
+def generated_content(self: Any) -> GeneratedContent:
     """Convert this instance to GeneratedContent."""
     content_dict = {}
     for field_name in self.__dataclass_fields__:
         content_dict[field_name] = getattr(self, field_name)
+    from .generable import GeneratedContent
+
     return GeneratedContent(content_dict)
 
 
@@ -393,10 +397,13 @@ def generated_content(self) -> GeneratedContent:
 
 
 # Add _from_generated_content to PartiallyGenerated
-def partial_from_generated_content(cls, partial_cls, content: GeneratedContent):
+def partial_from_generated_content(
+    cls: Any, partial_cls: Any, content: "GeneratedContent"
+) -> Any:
     """Create partial instance from GeneratedContent."""
-    kwargs: dict = {"id": content.id}
+    kwargs: dict[str, Any] = {"id": content.id}
     for field_name in cls.__dataclass_fields__:
+
         try:
             field_type = get_type_hints(cls)[field_name]
             value = content.value(field_type, for_property=field_name)
@@ -408,15 +415,15 @@ def partial_from_generated_content(cls, partial_cls, content: GeneratedContent):
     return partial_cls(**kwargs)
 
 
-def create_partially_generated(cls) -> Type:
+def create_partially_generated(cls: Any) -> type:
     # Create PartiallyGenerated inner class
-    partial_fields = {}
-    partial_annotations = {}
+    partial_fields: dict[str, Any] = {}
+    partial_annotations: dict[str, Any] = {}
     type_hints = get_type_hints(
         cls, localns={cls.__name__: cls}
     )  # Namespace annotation needed for self-referential types
 
-    for field_name, field_info in cls.__dataclass_fields__.items():
+    for field_name, _field_info in cls.__dataclass_fields__.items():
         field_type = type_hints.get(field_name, str)
 
         # Make all fields optional for partial generation
@@ -425,7 +432,7 @@ def create_partially_generated(cls) -> Type:
             partial_annotations[field_name] = field_type
         else:
             # Make optional
-            partial_annotations[field_name] = Optional[field_type]
+            partial_annotations[field_name] = field_type | None
 
         # All fields get default None for partial generation
         partial_fields[field_name] = field(default=None)

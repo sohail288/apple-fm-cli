@@ -8,7 +8,7 @@ This module provides the Property class for representing properties in generatio
 including their types, descriptions, and associated generation guides.
 """
 
-from typing import Any, List, Optional, Type
+from typing import Any
 
 from .generation_guide import GenerationGuide
 from .type_conversion import (
@@ -17,8 +17,8 @@ from .type_conversion import (
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
-    raise (ImportError("Python C bindings missing"))
+except ImportError as e:
+    raise ImportError("Python C bindings missing") from e
 
 
 class Property:
@@ -48,17 +48,17 @@ class Property:
     """
 
     name: str
-    type_class: Type
-    description: Optional[str]
-    guides: List[GenerationGuide]
+    type_class: type
+    description: str | None
+    guides: list[GenerationGuide]
 
     def __init__(
         self,
         name: str,
-        type_class: Type,
-        description: Optional[str] = None,
-        guides: List[GenerationGuide] = [],
-    ):
+        type_class: type,
+        description: str | None = None,
+        guides: list[GenerationGuide] = None,
+    ) -> None:
         """
         Initialize a Property instance.
 
@@ -84,12 +84,14 @@ class Property:
             ...     guides=[]
             ... )
         """
+        if guides is None:
+            guides = []
         self.name = name
         self.type_class = type_class
         self.description = description
         self.guides = guides
 
-    def convert_to_c(self, schema_ptr: Any):
+    def convert_to_c(self, schema_ptr: Any) -> None:
         """
         Convert this Property to its C representation and add it to a schema.
 
@@ -132,7 +134,7 @@ class Property:
 
         # Add guides to the property
         for guide in self.guides:
-            guide.convert_to_c(prop_ptr=prop_ptr)
+            guide._apply_to_c_property(prop_ptr=prop_ptr)
 
         lib.FMGenerationSchemaAddProperty(schema_ptr, prop_ptr)
         lib.FMRelease(prop_ptr)  # Clean up property after adding

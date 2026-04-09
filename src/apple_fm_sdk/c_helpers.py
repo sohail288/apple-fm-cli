@@ -42,7 +42,7 @@ import logging
 import queue
 import threading
 from ctypes import c_void_p
-from typing import Optional
+from typing import Any, cast
 
 from .errors import (
     FoundationModelsError,
@@ -52,20 +52,21 @@ from .errors import (
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
-    )
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
+    ) from e
 
 # Global registry to keep Python objects alive while used as ctypes callbacks
-_active_handles = {}
+_active_handles: dict[int, Any] = {}
 _handle_lock = threading.Lock()
 
 # Logger for error reporting
 logger = logging.getLogger(__name__)
 
 
-def _register_handle(obj):
+def _register_handle(obj: Any) -> ctypes.c_void_p:
     """
     Register a Python object to prevent garbage collection during C callbacks.
 
@@ -93,7 +94,7 @@ def _register_handle(obj):
     return handle_ptr
 
 
-def _unregister_handle(handle_ptr):
+def _unregister_handle(handle_ptr: Any) -> None:
     """
     Unregister a previously registered Python object handle.
 
@@ -108,12 +109,12 @@ def _unregister_handle(handle_ptr):
         It's safe to call with None or an already-unregistered handle.
     """
     if handle_ptr:
-        handle_addr = handle_ptr.value if isinstance(handle_ptr, c_void_p) else handle_ptr
+        handle_addr = cast(int, handle_ptr.value) if isinstance(handle_ptr, c_void_p) else cast(int, handle_ptr)
         with _handle_lock:
             _active_handles.pop(handle_addr, None)
 
 
-def _safe_from_handle(handle_ptr):
+def _safe_from_handle(handle_ptr: Any) -> Any | None:
     """
     Safely retrieve a Python object from its handle pointer.
 
@@ -131,12 +132,12 @@ def _safe_from_handle(handle_ptr):
     if not handle_ptr:
         return None
 
-    handle_addr = handle_ptr.value if isinstance(handle_ptr, c_void_p) else handle_ptr
+    handle_addr = cast(int, handle_ptr.value) if isinstance(handle_ptr, c_void_p) else cast(int, handle_ptr)
     with _handle_lock:
         return _active_handles.get(handle_addr, None)
 
 
-def _get_error_string(error_code, error_desc):
+def _get_error_string(error_code: Any, error_desc: Any) -> tuple[int | None, str | None]:
     """
     Extract error information from C error output parameters.
 
@@ -205,7 +206,7 @@ class _ManagedObject:
         Python object is garbage collected.
     """
 
-    def __init__(self, ptr):
+    def __init__(self, ptr: Any) -> None:
         """
         Initialize a managed object with a C pointer.
 
@@ -217,7 +218,7 @@ class _ManagedObject:
             raise FoundationModelsError("Failed to create object")
         self._ptr = ptr
 
-    def _retain(self):
+    def _retain(self) -> None:
         """
         Manually increment the reference count of the managed pointer.
 
@@ -238,7 +239,7 @@ class _ManagedObject:
         """
         lib.FMRetain(self._ptr)
 
-    def _release(self):
+    def _release(self) -> None:
         """
         Decrement the reference count of the managed pointer.
 
@@ -252,7 +253,7 @@ class _ManagedObject:
         if hasattr(self, "_ptr") and self._ptr:
             lib.FMRelease(self._ptr)
 
-    def __del__(self):
+    def __del__(self) -> None:
         """
         Destructor that releases the managed pointer.
 
@@ -265,15 +266,15 @@ class _ManagedObject:
 
 # Use the callback type from ctypes bindings instead of redefining it
 @lib.FMLanguageModelSessionResponseCallback
-def _session_callback(status, content, length, future_handle):
+def _session_callback(status: int, content: Any, length: int, future_handle: Any) -> None:
     """ctypes callback function."""
 
     # Define helper functions outside try block to avoid "possibly unbound" errors
-    async def _set_future_result(future: asyncio.Future, result):
+    async def _set_future_result(future: asyncio.Future[Any], result: Any) -> None:
         if not future.cancelled():
             future.set_result(result)
 
-    async def _set_future_exception(future: asyncio.Future, e):
+    async def _set_future_exception(future: asyncio.Future[Any], e: Exception) -> None:
         if not future.cancelled():
             future.set_exception(e)
 
@@ -315,7 +316,7 @@ def _session_callback(status, content, length, future_handle):
 
 # Use the callback type from the bindings
 @lib.FMLanguageModelSessionStructuredResponseCallback
-def _session_structured_callback(status, content_ptr, future_handle):
+def _session_structured_callback(status: int, content_ptr: Any, future_handle: Any) -> None:
     """ctypes callback function."""
     from .generable import GeneratedContent  # Import here to avoid circular import
 
@@ -323,11 +324,11 @@ def _session_structured_callback(status, content_ptr, future_handle):
     content_ptr_owned = False
 
     # Define helper functions outside try block to avoid "possibly unbound" errors
-    async def _set_future_result(future: asyncio.Future, result):
+    async def _set_future_result(future: asyncio.Future[Any], result: Any) -> None:
         if not future.cancelled():
             future.set_result(result)
 
-    async def _set_future_exception(future: asyncio.Future, e):
+    async def _set_future_exception(future: asyncio.Future[Any], e: Exception) -> None:
         if not future.cancelled():
             future.set_exception(e)
 
@@ -435,11 +436,11 @@ class StreamingCallback:
         layer is using it. The Session class handles this automatically.
     """
 
-    error: Optional[FoundationModelsError]
-    queue: "queue.Queue"
+    error: FoundationModelsError | None
+    queue: queue.Queue[Any]
     completed: threading.Event
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize a new StreamingCallback instance.
 
@@ -453,7 +454,7 @@ class StreamingCallback:
 
         # Use the callback type from ctypes bindings
         @lib.FMLanguageModelSessionResponseCallback
-        def _callback_impl(status, content, length, user_info):
+        def _callback_impl(status: int, content: Any, length: int, user_info: Any) -> None:
             try:
                 if status != GenerationErrorCode.SUCCESS:
                     # Convert status code to specific error

@@ -3,16 +3,18 @@
 
 import ctypes
 import json
+from typing import Any, cast
 
 from apple_fm_sdk.c_helpers import _get_error_string
 from apple_fm_sdk.errors import _status_code_to_exception
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
-    )
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
+    ) from e
 
 
 class Transcript:
@@ -147,8 +149,8 @@ class Transcript:
 
     def __init__(
         self,
-        _ptr,
-    ):
+        _ptr: Any,
+    ) -> None:
         """Initialize a Transcript instance.
 
         Note:
@@ -219,10 +221,10 @@ class Transcript:
         # The String wrapper handles memory, so we don't need to manually free
         json_str = str(jsn_string)
         result = json.loads(json_str)
-        return result
+        return cast(dict[str, Any], result)
 
     @classmethod
-    async def from_dict(cls, dict: dict) -> "Transcript":
+    async def from_dict(cls, dict: dict[str, Any]) -> "Transcript":
         """Create a Transcript from a dictionary representation.
 
         This method deserializes a transcript dictionary (typically loaded from JSON)
@@ -292,7 +294,8 @@ class Transcript:
 
         See Also:
             - :meth:`to_dict`: For converting a Transcript to a dictionary
-            - :meth:`~apple_fm_sdk.session.LanguageModelSession.from_transcript`: For creating sessions from transcripts
+            - :meth:`~apple_fm_sdk.session.LanguageModelSession.from_transcript`:
+              For creating sessions from transcripts
             - :class:`~apple_fm_sdk.tool.Tool`: For creating custom tools
         """
         error_code = ctypes.c_int32()  # C error status code
@@ -316,7 +319,7 @@ class Transcript:
 
         return cls(_ptr=session_ptr)
 
-    def _update_session_ptr(self, new_ptr):
+    def _update_session_ptr(self, new_ptr: Any) -> None:
         """Update the session pointer associated with this transcript.
 
         This is used internally to keep the transcript's session pointer in sync

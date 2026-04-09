@@ -2,11 +2,10 @@
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
 from dataclasses import dataclass
-from enum import Enum
-from typing import Optional
+from enum import StrEnum
 
 
-class SamplingModeType(str, Enum):
+class SamplingModeType(StrEnum):
     """Enumeration of available sampling mode types.
 
     :cvar GREEDY: Always select the most likely token
@@ -40,12 +39,12 @@ class SamplingMode:
     """
 
     mode_type: SamplingModeType
-    top: Optional[int] = None
-    probability_threshold: Optional[float] = None
-    seed: Optional[int] = None
+    top: int | None = None
+    probability_threshold: float | None = None
+    seed: int | None = None
 
     @classmethod
-    def greedy(cls) -> "SamplingMode":
+    def greedy(cls) -> SamplingMode:
         """Create a sampling mode that always chooses the most likely token.
 
         Greedy sampling provides deterministic, focused responses by always
@@ -66,10 +65,10 @@ class SamplingMode:
     @classmethod
     def random(
         cls,
-        top: Optional[int] = None,
-        probability_threshold: Optional[float] = None,
-        seed: Optional[int] = None,
-    ) -> "SamplingMode":
+        top: int | None = None,
+        probability_threshold: float | None = None,
+        seed: int | None = None,
+    ) -> SamplingMode:
         """Create a random sampling mode with optional constraints.
 
         Random sampling introduces variability in responses by randomly selecting
@@ -169,12 +168,12 @@ class GenerationOptions:
     :vartype repetition_penalty: Optional[float]
     """
 
-    sampling: Optional[SamplingMode] = None
-    temperature: Optional[float] = None
-    maximum_response_tokens: Optional[int] = None
-    repetition_penalty: Optional[float] = None
+    sampling: SamplingMode | None = None
+    temperature: float | None = None
+    maximum_response_tokens: int | None = None
+    repetition_penalty: float | None = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate generation options after initialization."""
         if self.temperature is not None:
             if not isinstance(self.temperature, (int, float)):
@@ -197,9 +196,9 @@ class GenerationOptions:
         if self.sampling is not None and not isinstance(self.sampling, SamplingMode):
             raise ValueError("'sampling' must be a SamplingMode instance")
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert GenerationOptions to a dictionary for JSON serialization."""
-        result = {}
+        result: dict[str, Any] = {}
 
         if self.sampling is not None:
             sampling_dict = {"mode": self.sampling.mode_type.value}

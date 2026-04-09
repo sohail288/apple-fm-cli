@@ -7,10 +7,10 @@ Swift type string representations, which are used in schema generation for
 structured output and tool definitions.
 """
 
-from typing import Type, Union
+from typing import Union
 
 
-def _python_type_to_string(python_type: Type) -> str:
+def _python_type_to_string(python_type: type) -> str:
     """Convert a Python type to a Swift type string representation for the schema.
 
     This function maps Python types to their corresponding Swift type strings

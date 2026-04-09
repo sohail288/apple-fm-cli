@@ -1,35 +1,14 @@
 # For licensing see accompanying LICENSE file.
 # Copyright (C) 2026 Apple Inc. All Rights Reserved.
 
-"""
-This module provides classes and utilities for creating generation guides that constrain
-how foundation models generate text, similar to Swift's GenerationGuide functionality.
-
-The main components are:
-
-* :class:`GuideType`: Enumeration of available constraint types
-* :class:`GenerationGuide`: Class representing a generation constraint
-* :func:`guide`: Convenience function for creating guided dataclass fields
-
-Example:
-        import apple_fm_sdk as fm
-
-        @fm.generable("A cat's profile")
-        class Cat:
-            name: str = guide("Cat's name")
-            age: int = guide("Age in years", range=(0, 20))
-            favoriteFood: str = guide("Favorite food", anyOf=["fish", "chicken", "tuna"])
-"""
-
 import ctypes
-from dataclasses import field
 from enum import Enum
-from typing import Any, List, Optional, Union
+from typing import Any
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
-    raise (ImportError("Python C bindings missing"))
+except ImportError as e:
+    raise ImportError("Python C bindings missing") from e
 
 
 class GuideType(Enum):
@@ -38,48 +17,44 @@ class GuideType(Enum):
     This enum defines the different types of constraints that can be applied
     to guide model generation behavior.
 
-    :cvar anyOf: Constrains output to a specific set of string values
-    :cvar constant: Constrains output to a single constant value
-    :cvar count: Sets exact number of items in collections
-    :cvar element: Enforces guides on array elements
-    :cvar maxItems: Sets maximum number of items in collections
+    :cvar any_of: Constraints output to one of a list of strings
+    :cvar constant: Enforces a fixed string value
+    :cvar count: Specifies the required number of items in an array
+    :cvar element: Applies a guide to elements within an array
+    :cvar max_items: Sets a maximum count for items in an array
     :cvar maximum: Sets a maximum numeric value constraint
-    :cvar minItems: Sets minimum number of items in collections
+    :cvar min_items: Sets a minimum count for items in an array
     :cvar minimum: Sets a minimum numeric value constraint
     :cvar range: Sets both minimum and maximum numeric constraints
     :cvar regex: Enforces a regex pattern constraint on strings
     """
 
-    anyOf = "enum"  # Serializes to "enum" in JSON schema
+    any_of = "enum"  # Serializes to "enum" in JSON schema
     constant = "constant"  # Represented by enum of 1 value
     count = "count"
     element = "element"  # Enforces a guide on the elements within the array.
-    maxItems = "maxItems"  # called maximumCount in Swift
+    max_items = "maxItems"  # called maximumCount in Swift
     maximum = "maximum"
-    minItems = "minItems"  # called minimumCount in Swift
+    min_items = "minItems"  # called minimumCount in Swift
     minimum = "minimum"
     range = "range"
     regex = "regex"  # Enforces a limited regex vocabulary -> serializes to "pattern"
 
 
 class GenerationGuide:
-    """Represents constraints for generation, similar to Swift's GenerationGuide.
+    """Represents a constraint used to guide the generation of a property.
 
-    This class encapsulates different types of constraints that can be applied
-    to guide model generation, such as limiting choices, setting numeric ranges,
-    or constraining collection sizes.
+    Guides are used in conjunction with GenerationSchema to enforce specific
+    data formats, ranges, or choices during model generation.
 
-    :ivar guide_type: The type of constraint to apply
-    :vartype guide_type: GuideType
-    :ivar value: The constraint value(s) associated with the guide type
-    :vartype value: Any
+    :param guide_type: The type of guide constraint
+    :type guide_type: GuideType
+    :param value: The value(s) for the constraint
+    :type value: Any, optional
     """
 
-    guide_type: GuideType
-    value: Any
-
-    def __init__(self, guide_type: GuideType, value: Any = None):
-        """Initialize a GenerationGuide instance.
+    def __init__(self, guide_type: GuideType, value: Any = None) -> None:
+        """Initialize a generation guide.
 
         :param guide_type: The type of guide constraint
         :type guide_type: GuideType
@@ -90,200 +65,158 @@ class GenerationGuide:
         self.value = value
 
     @classmethod
-    def anyOf(cls, values: List[str]) -> "GenerationGuide":
-        """Create an anyOf guide for strings.
+    def any_of(cls, values: list[str]) -> GenerationGuide:
+        """Create an any_of guide for strings.
 
         Constrains the output to be one of the specified string values.
 
         :param values: List of valid string choices
         :type values: List[str]
-        :return: A GenerationGuide with anyOf constraint
+        :return: A GenerationGuide with any_of constraint
         :rtype: GenerationGuide
 
         Example::
 
-            guide = GenerationGuide.anyOf(["red", "green", "blue"])
+            guide = GenerationGuide.any_of(["red", "green", "blue"])
         """
-        return cls(GuideType.anyOf, values)
+        return cls(GuideType.any_of, values)
 
     @classmethod
-    def constant(cls, value: str) -> "GenerationGuide":
+    def constant(cls, value: str) -> GenerationGuide:
         """Enforce that the string be precisely the given value.
 
         :param value: The exact string value required
         :type value: str
         :return: A GenerationGuide with constant constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.constant("active")
         """
         return cls(GuideType.constant, value)
 
     @classmethod
-    def count(cls, count: int) -> "GenerationGuide":
-        """Enforce that the array has exactly a certain number of elements.
+    def count(cls, value: int) -> GenerationGuide:
+        """Specify exactly how many elements should be in an array.
 
-        :param count: The exact number of elements required
-        :type count: int
+        :param value: The required number of array elements
+        :type value: int
         :return: A GenerationGuide with count constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.count(5)
         """
-        return cls(GuideType.count, count)
+        return cls(GuideType.count, value)
 
     @classmethod
-    def element(cls, guide: "GenerationGuide") -> "GenerationGuide":
-        """Enforce a guide on the elements within the array.
+    def element(cls, guide: GenerationGuide) -> GenerationGuide:
+        """Apply a guide to each element within an array.
 
-        :param guide: The guide to apply to each array element
+        :param guide: The guide to apply to array elements
         :type guide: GenerationGuide
         :return: A GenerationGuide with element constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.element(GenerationGuide.range((0, 100)))
         """
         return cls(GuideType.element, guide)
 
     @classmethod
-    def max_items(cls, value: int) -> "GenerationGuide":
-        """Enforce a maximum number of elements in the array.
+    def max_items(cls, value: int) -> GenerationGuide:
+        """Set a maximum number of elements in an array.
 
-        :param value: Maximum number of elements allowed
+        :param value: The maximum allowed number of elements
         :type value: int
         :return: A GenerationGuide with max_items constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.max_items(10)
         """
-        return cls(GuideType.maxItems, value)
+        return cls(GuideType.max_items, value)
 
     @classmethod
-    def maximum(cls, value: Union[int, float]) -> "GenerationGuide":
-        """Enforce a maximum value.
+    def maximum(cls, value: float) -> GenerationGuide:
+        """Set a maximum numeric value.
 
-        :param value: Maximum numeric value allowed
-        :type value: Union[int, float]
+        :param value: The maximum allowed numeric value
+        :type value: float
         :return: A GenerationGuide with maximum constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.maximum(100.0)
         """
         return cls(GuideType.maximum, value)
 
     @classmethod
-    def min_items(cls, value: int) -> "GenerationGuide":
-        """Enforce a minimum number of elements in the array.
+    def min_items(cls, value: int) -> GenerationGuide:
+        """Set a minimum number of elements in an array.
 
-        :param value: Minimum number of elements required
+        :param value: The minimum allowed number of elements
         :type value: int
         :return: A GenerationGuide with min_items constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.min_items(1)
         """
-        return cls(GuideType.minItems, value)
+        return cls(GuideType.min_items, value)
 
     @classmethod
-    def minimum(cls, value: Union[int, float]) -> "GenerationGuide":
-        """Enforce a minimum value.
+    def minimum(cls, value: float) -> GenerationGuide:
+        """Set a minimum numeric value.
 
-        :param value: Minimum numeric value allowed
-        :type value: Union[int, float]
+        :param value: The minimum allowed numeric value
+        :type value: float
         :return: A GenerationGuide with minimum constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.minimum(0.0)
         """
         return cls(GuideType.minimum, value)
 
     @classmethod
-    def range(cls, range_tuple: tuple) -> "GenerationGuide":
-        """Enforce values fall within a range.
+    def range(cls, min_val: float, max_val: float) -> GenerationGuide:
+        """Set both minimum and maximum numeric constraints.
 
-        :param range_tuple: Tuple of (min, max) values
-        :type range_tuple: tuple
+        :param min_val: The minimum allowed numeric value
+        :type min_val: float
+        :param max_val: The maximum allowed numeric value
+        :type max_val: float
         :return: A GenerationGuide with range constraint
         :rtype: GenerationGuide
-
-        Example::
-
-            guide = GenerationGuide.range((0, 120))
         """
-        return cls(GuideType.range, range_tuple)
+        return cls(GuideType.range, (min_val, max_val))
 
     @classmethod
-    def regex(cls, pattern: str) -> "GenerationGuide":
-        """Enforce that the string matches the given regex pattern.
+    def regex(cls, pattern: str) -> GenerationGuide:
+        """Enforce a regex pattern constraint on strings.
 
-        :param pattern: Regular expression pattern to match
+        :param pattern: The regex pattern to enforce
         :type pattern: str
         :return: A GenerationGuide with regex constraint
         :rtype: GenerationGuide
 
-        Example::
-
-            guide = GenerationGuide.regex(r"#/[a-zA-Z]+/#")
+        .. note::
+            The model supports a subset of regex vocabulary optimized for
+            on-device generation.
         """
         return cls(GuideType.regex, pattern)
 
-    def convert_to_c(self, prop_ptr: Any):
-        """Convert the generation guide to C library calls.
+    def _apply_to_c_property(self, prop_ptr: Any, wrapped: bool = False) -> None:
+        """Apply this guide to a C property object.
 
-        Translates the Python generation guide into appropriate C library
-        function calls to apply the constraints in the underlying foundation
-        model system.
+        Internal method used to bridge Python guides to the C library.
 
-        :param prop_ptr: Pointer to the C property object that will receive
-                        the guide constraints
+        :param prop_ptr: Pointer to the C property object
         :type prop_ptr: Any
-        :raises RuntimeError: If the guide_type is not supported or unknown
-
-        .. note::
-            This method handles the low-level conversion between Python objects
-            and C data structures, including proper memory management for
-            string arrays and type conversions for numeric values.
-
-            Some guide types (minimum, maximum, minItems, maxItems, regex, element)
-            are handled through serialization since they don't have direct C bindings.
+        :param wrapped: Whether this guide is being applied as a nested
+            element guide
+        :type wrapped: bool, optional
         """
         guide_type = self.guide_type
         value = self.value
-        wrapped = False  # Indicates if the guide is wrapped (for element guides)
 
-        # Check for wrapped element guide
         if guide_type == GuideType.element:
             guide_type = self.value.guide_type
             value = self.value.value
             wrapped = True
 
         # Handle guide types that have direct C bindings
-        if guide_type == GuideType.anyOf:
-            self.convert_anyOf_to_c(anyOf=value, prop_ptr=prop_ptr, wrapped=wrapped)
+        if guide_type == GuideType.any_of:
+            self.convert_any_of_to_c(any_of=value, prop_ptr=prop_ptr, wrapped=wrapped)
         elif guide_type == GuideType.constant:
-            # Constant is equivalent to anyOf with a single value
-            self.convert_anyOf_to_c(anyOf=[value], prop_ptr=prop_ptr, wrapped=wrapped)
+            self.convert_any_of_to_c(any_of=[value], prop_ptr=prop_ptr, wrapped=wrapped)
         elif guide_type == GuideType.count:
             lib.FMGenerationSchemaPropertyAddCountGuide(prop_ptr, int(value), wrapped)
-        elif guide_type == GuideType.maxItems:
+        elif guide_type == GuideType.max_items:
             lib.FMGenerationSchemaPropertyAddMaxItemsGuide(prop_ptr, int(value), wrapped)
         elif guide_type == GuideType.maximum:
             lib.FMGenerationSchemaPropertyAddMaximumGuide(prop_ptr, float(value), wrapped)
-        elif guide_type == GuideType.minItems:
+        elif guide_type == GuideType.min_items:
             lib.FMGenerationSchemaPropertyAddMinItemsGuide(prop_ptr, int(value), wrapped)
         elif guide_type == GuideType.minimum:
             lib.FMGenerationSchemaPropertyAddMinimumGuide(prop_ptr, float(value), wrapped)
@@ -300,14 +233,14 @@ class GenerationGuide:
             # Fallback for any unexpected guide types
             raise RuntimeError(f"Unknown or unsupported guide type: {self.guide_type}")
 
-    def convert_anyOf_to_c(self, anyOf, prop_ptr: Any, wrapped: bool = False):
-        """Convert anyOf constraint to C library calls.
+    def convert_any_of_to_c(self, any_of: list[str], prop_ptr: Any, wrapped: bool = False) -> None:
+        """Convert any_of constraint to C library calls.
 
         Handles the conversion of string choice constraints to C data structures
         and invokes the appropriate C library function.
 
-        :param anyOf: List of valid string choices
-        :type anyOf: List[str]
+        :param any_of: List of valid string choices
+        :type any_of: List[str]
         :param prop_ptr: Pointer to the C property object
         :type prop_ptr: Any
         :param wrapped: Whether this guide is wrapped (for element guides)
@@ -318,156 +251,75 @@ class GenerationGuide:
             the string choices to the C library. Memory management is handled
             automatically through Python's garbage collection.
         """
-        c_strings = [ctypes.create_string_buffer(c.encode("utf-8")) for c in anyOf]
-        choice_ptrs = (ctypes.POINTER(ctypes.c_char) * len(anyOf))(
+        c_strings = [ctypes.create_string_buffer(c.encode("utf-8")) for c in any_of]
+        choice_ptrs = (ctypes.POINTER(ctypes.c_char) * len(any_of))(
             *[ctypes.cast(s, ctypes.POINTER(ctypes.c_char)) for s in c_strings]
         )
-        lib.FMGenerationSchemaPropertyAddAnyOfGuide(prop_ptr, choice_ptrs, len(anyOf), wrapped)
+        lib.FMGenerationSchemaPropertyAddAnyOfGuide(prop_ptr, choice_ptrs, len(any_of), wrapped)
 
 
 def guide(
-    description: Optional[str] = None,
+    description: str | None = None,
     *,
-    anyOf: Optional[List[str]] = None,
-    constant: Optional[str] = None,
-    count: Optional[int] = None,
-    element: Optional["GenerationGuide"] = None,
-    max_items: Optional[int] = None,
-    maximum: Optional[Union[int, float]] = None,
-    min_items: Optional[int] = None,
-    minimum: Optional[Union[int, float]] = None,
-    range: Optional[tuple] = None,
-    regex: Optional[str] = None,
-) -> Any:
-    """Create a field with a guide, similar to Swift's @Guide annotation.
+    any_of: list[str] | None = None,
+    constant: str | None = None,
+    count: int | None = None,
+    element: GenerationGuide | None = None,
+    max_items: int | None = None,
+    maximum: float | None = None,
+    min_items: int | None = None,
+    minimum: float | None = None,
+    range: tuple[float, float] | None = None,
+    regex: str | None = None,
+) -> GenerationGuide | None:
+    """Helper function to create a GenerationGuide from keyword arguments.
 
-    This convenience function creates a dataclass field with generation guide
-    metadata that can be used to constrain model output during generation.
-    Multiple constraints can be applied to a single field.
+    This function provides a convenient way to define guides when creating
+    property definitions.
 
-    :param description: Description of the field for documentation purposes
+    :param description: Optional description for the guide
     :type description: str, optional
-    :param anyOf: List of valid string choices that constrain output to specific values
-    :type anyOf: List[str], optional
-    :param constant: Constrains output to a single constant value
+    :param any_of: Constraints output to one of the provided strings
+    :type any_of: List[str], optional
+    :param constant: Enforces a fixed string value
     :type constant: str, optional
-    :param count: Expected exact number of items for collections (must be positive)
+    :param count: Specifies the required number of items in an array
     :type count: int, optional
-    :param element: Guide to apply to array elements
+    :param element: Applies a guide to elements within an array
     :type element: GenerationGuide, optional
-    :param max_items: Maximum number of items for collections (must be non-negative)
+    :param max_items: Sets a maximum count for items in an array
     :type max_items: int, optional
-    :param maximum: Maximum value for numeric types
-    :type maximum: Union[int, float], optional
-    :param min_items: Minimum number of items for collections (must be non-negative)
+    :param maximum: Sets a maximum numeric value constraint
+    :type maximum: float, optional
+    :param min_items: Sets a minimum count for items in an array
     :type min_items: int, optional
-    :param minimum: Minimum value for numeric types
-    :type minimum: Union[int, float], optional
-    :param range: Tuple of (min, max) for numeric ranges
-    :type range: tuple, optional
-    :param regex: Regular expression pattern that the output must match
+    :param minimum: Sets a minimum numeric value constraint
+    :type minimum: float, optional
+    :param range: Sets both minimum and maximum numeric constraints
+    :type range: tuple[float, float], optional
+    :param regex: Enforces a regex pattern constraint on strings
     :type regex: str, optional
-    :return: A dataclass field with guide metadata attached
-    :rtype: Any
-    :raises ValueError: If any constraint values are invalid (for example, negative counts,
-                       malformed ranges, non-string choices)
-
-    Example:
-        Basic field with description only::
-
-            name: str = guide("The person's full name")
-
-        Numeric field with range constraint::
-
-            age: int = guide("Age in years", range=(0, 120))
-
-        Collection with exact count::
-
-            hobbies: List[str] = guide("List of hobbies", count=3)
-
-        String field with choices::
-
-            color: str = guide("Favorite color", anyOf=["red", "blue", "green"])
-
-        Numeric field with separate min/max::
-
-            score: float = guide("Test score", minimum=0.0, maximum=100.0)
-
-        Collection with size constraints::
-
-            tags: List[str] = guide("Tags list", min_items=1, max_items=5)
-
-        Constant value constraint::
-
-            status: str = guide("Status", constant="active")
-
-        Regex pattern constraint::
-
-            email: str = guide("Name", regex=r"#/[a-zA-Z]+/#")
-
-        Element constraint for arrays::
-
-            scores: List[int] = guide("Test scores", element=GenerationGuide.range((0, 100)))
-
-    .. note::
-        The guide function validates constraint parameters at creation time
-        and stores them as metadata that can be processed by generation
-        systems to enforce the specified constraints.
+    :return: A GenerationGuide instance if any constraint was provided, else None
+    :rtype: GenerationGuide, optional
     """
-    metadata: dict = {"description": description}
-    guides = []
-
-    if anyOf is not None:
-        if not isinstance(anyOf, list) or not all(isinstance(c, str) for c in anyOf):
-            raise ValueError("anyOf must be a list of strings")
-        guides.append(GenerationGuide(GuideType.anyOf, anyOf))
-
+    if any_of is not None:
+        return GenerationGuide.any_of(any_of)
     if constant is not None:
-        if not isinstance(constant, str):
-            raise ValueError("constant must be a string")
-        guides.append(GenerationGuide(GuideType.constant, constant))
-
+        return GenerationGuide.constant(constant)
     if count is not None:
-        if not isinstance(count, int) or count <= 0:
-            raise ValueError("count must be a positive integer")
-        guides.append(GenerationGuide(GuideType.count, count))
-
+        return GenerationGuide.count(count)
     if element is not None:
-        if not isinstance(element, GenerationGuide):
-            raise ValueError("element must be a GenerationGuide instance")
-        guides.append(GenerationGuide(GuideType.element, element))
-
+        return GenerationGuide.element(element)
     if max_items is not None:
-        if not isinstance(max_items, int) or max_items < 0:
-            raise ValueError("max_items must be a non-negative integer")
-        guides.append(GenerationGuide(GuideType.maxItems, max_items))
-
+        return GenerationGuide.max_items(max_items)
     if maximum is not None:
-        if not isinstance(maximum, (int, float)):
-            raise ValueError("maximum must be a number")
-        guides.append(GenerationGuide(GuideType.maximum, maximum))
-
+        return GenerationGuide.maximum(maximum)
     if min_items is not None:
-        if not isinstance(min_items, int) or min_items < 0:
-            raise ValueError("min_items must be a non-negative integer")
-        guides.append(GenerationGuide(GuideType.minItems, min_items))
-
+        return GenerationGuide.min_items(min_items)
     if minimum is not None:
-        if not isinstance(minimum, (int, float)):
-            raise ValueError("minimum must be a number")
-        guides.append(GenerationGuide(GuideType.minimum, minimum))
-
+        return GenerationGuide.minimum(minimum)
     if range is not None:
-        if not isinstance(range, tuple) or len(range) != 2:
-            raise ValueError("range must be a tuple of (min, max)")
-        guides.append(GenerationGuide(GuideType.range, range))
-
+        return GenerationGuide.range(*range)
     if regex is not None:
-        if not isinstance(regex, str):
-            raise ValueError("regex must be a string")
-        guides.append(GenerationGuide(GuideType.regex, regex))
-
-    if guides:
-        metadata["guides"] = guides
-
-    return field(metadata=metadata)
+        return GenerationGuide.regex(regex)
+    return None

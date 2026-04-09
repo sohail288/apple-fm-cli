@@ -6,7 +6,6 @@ Foundation Models error classes and exception types.
 """
 
 from enum import IntEnum
-from typing import Optional
 
 
 class FoundationModelsError(Exception):
@@ -21,7 +20,7 @@ class GenerationError(FoundationModelsError):
     pass
 
 
-class InvalidGenerationSchemaError(FoundationModelsError):
+class InvalidGenerationSchemaError(GenerationError):
     """Error thrown when a generation schema is invalid."""
 
     pass
@@ -81,9 +80,9 @@ class RefusalError(GenerationError):
     def __init__(
         self,
         message: str,
-        debug_description: Optional[str] = None,
-        explanation_entries=None,
-    ):
+        debug_description: str | None = None,
+        explanation_entries: list[str] | None = None,
+    ) -> None:
         super().__init__(message, debug_description)
         self.explanation_entries = explanation_entries or []
 
@@ -91,7 +90,7 @@ class RefusalError(GenerationError):
 class ToolCallError(FoundationModelsError):
     """Error thrown when a tool call fails."""
 
-    def __init__(self, tool_name: str, underlying_error: Exception):
+    def __init__(self, tool_name: str, underlying_error: Exception) -> None:
         super().__init__(f"Tool '{tool_name}' failed: {underlying_error}")
         self.tool_name = tool_name
         self.underlying_error = underlying_error
@@ -115,10 +114,10 @@ class GenerationErrorCode(IntEnum):
 
 
 def _status_code_to_exception(
-    status_code: int, debug_description: Optional[str] = None
+    status_code: int, debug_description: str | None = None
 ) -> GenerationError:
     """Convert a C status code to the appropriate GenerationError subclass."""
-    error_map = {
+    error_map: dict[GenerationErrorCode, type[GenerationError]] = {
         GenerationErrorCode.EXCEEDED_CONTEXT_WINDOW_SIZE: ExceededContextWindowSizeError,
         GenerationErrorCode.ASSETS_UNAVAILABLE: AssetsUnavailableError,
         GenerationErrorCode.GUARDRAIL_VIOLATION: GuardrailViolationError,
@@ -131,7 +130,7 @@ def _status_code_to_exception(
         GenerationErrorCode.INVALID_SCHEMA: InvalidGenerationSchemaError,
     }
 
-    error_messages = {
+    error_messages: dict[GenerationErrorCode, str] = {
         GenerationErrorCode.EXCEEDED_CONTEXT_WINDOW_SIZE: "Context window size exceeded",
         GenerationErrorCode.ASSETS_UNAVAILABLE: "Required assets are unavailable",
         GenerationErrorCode.GUARDRAIL_VIOLATION: "Guardrail violation occurred",

@@ -3,7 +3,8 @@ import json
 import logging
 import time
 import uuid
-from typing import Any, AsyncGenerator
+from collections.abc import AsyncGenerator
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
@@ -194,8 +195,8 @@ def build_responses_prompt(input_data: Any, *, codex_mode: bool) -> str:
 async def chat_completions(request: Request) -> Any:
     try:
         body = await request.json()
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from e
 
     messages = body.get("messages", [])
     model_name = body.get("model", "apple-fm")
@@ -259,7 +260,7 @@ async def chat_completions(request: Request) -> Any:
 
     if stream:
 
-        async def stream_generator() -> AsyncGenerator[str, None]:
+        async def stream_generator() -> AsyncGenerator[str]:
             yield format_openai_chunk(completion_id, model_name, role="assistant")
             try:
                 previous_text = ""
@@ -291,7 +292,7 @@ async def chat_completions(request: Request) -> Any:
             respond_kwargs = {}
             if generating_type:
                 respond_kwargs["generating"] = generating_type
-            response = await session.respond(full_prompt, **respond_kwargs)
+            response = await session.respond(full_prompt, **respond_kwargs)  # type: ignore[call-overload]
             if generating_type:
                 content = json.dumps(dataclasses.asdict(response))
             else:
@@ -317,7 +318,7 @@ async def chat_completions(request: Request) -> Any:
                 },
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/v1/responses")
@@ -328,8 +329,8 @@ async def responses_api(request: Request) -> Any:
     logger.info(f"Incoming Responses API raw body length: {len(raw_body)}")
     try:
         body = json.loads(raw_body)
-    except Exception:
-        raise HTTPException(status_code=400, detail=f"Invalid JSON body")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Invalid JSON body") from e
 
     model_name = body.get("model", "apple-fm")
     input_data = body.get("input")
@@ -374,7 +375,7 @@ async def responses_api(request: Request) -> Any:
 
     if stream:
 
-        async def stream_generator() -> AsyncGenerator[str, None]:
+        async def stream_generator() -> AsyncGenerator[str]:
             logger.info("Starting Responses stream")
             response_stub = {
                 "id": response_id,
@@ -488,7 +489,7 @@ async def responses_api(request: Request) -> Any:
             respond_kwargs = {}
             if generating_type:
                 respond_kwargs["generating"] = generating_type
-            response = await session.respond(full_prompt, **respond_kwargs)
+            response = await session.respond(full_prompt, **respond_kwargs)  # type: ignore[call-overload]
             if generating_type:
                 content = json.dumps(dataclasses.asdict(response))
             else:
@@ -517,10 +518,10 @@ async def responses_api(request: Request) -> Any:
                 },
             }
         except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
+def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:  # noqa: S104
     import uvicorn
 
     uvicorn.run(app, host=host, port=port)

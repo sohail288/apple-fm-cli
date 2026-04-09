@@ -8,7 +8,8 @@ import logging
 import queue
 import threading
 import warnings
-from typing import Any, AsyncIterator, Optional, Type, Union, overload
+from collections.abc import AsyncIterator
+from typing import Any, cast, overload
 
 from apple_fm_sdk.transcript import Transcript
 
@@ -32,10 +33,11 @@ logger = logging.getLogger(__name__)
 
 try:
     from . import _ctypes_bindings as lib
-except ImportError:
+except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
-    )
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
+    ) from e
 
 Prompt = str  # Alias for prompt type
 
@@ -45,11 +47,11 @@ class LanguageModelSession(_ManagedObject):
 
     def __init__(
         self,
-        instructions: Optional[str] = None,
-        model: Optional[SystemLanguageModel] = None,
-        tools: Optional[list[Tool]] = None,
-        _ptr=None,
-    ):
+        instructions: str | None = None,
+        model: SystemLanguageModel | None = None,
+        tools: list[Tool] | None = None,
+        _ptr: Any = None,
+    ) -> None:
         """Create a language model session."""
         # Initialize request lock for preventing concurrent requests
         self._request_lock = asyncio.Lock()
@@ -86,19 +88,19 @@ class LanguageModelSession(_ManagedObject):
             super().__init__(ptr)
 
     @staticmethod
-    def summarization(instructions: Optional[str] = None) -> "LanguageModelSession":
+    def summarization(instructions: str | None = None) -> LanguageModelSession:
         """Create a session optimized for summarization tasks."""
         model = SystemLanguageModel(use_case=SystemLanguageModelUseCase.GENERAL)
         return LanguageModelSession(instructions=instructions, model=model)
 
     @staticmethod
-    def content_tagging(instructions: Optional[str] = None) -> "LanguageModelSession":
+    def content_tagging(instructions: str | None = None) -> LanguageModelSession:
         """Create a session optimized for content tagging and classification."""
         model = SystemLanguageModel(use_case=SystemLanguageModelUseCase.CONTENT_TAGGING)
         return LanguageModelSession(instructions=instructions, model=model)
 
     @staticmethod
-    def proofreading(instructions: Optional[str] = None) -> "LanguageModelSession":
+    def proofreading(instructions: str | None = None) -> LanguageModelSession:
         """Create a session optimized for proofreading and grammatical correction."""
         return LanguageModelSession(instructions=instructions)
 
@@ -141,9 +143,9 @@ class LanguageModelSession(_ManagedObject):
     def from_transcript(
         cls,
         transcript: Transcript,
-        model: Optional[SystemLanguageModel] = None,
-        tools: Optional[list[Tool]] = None,
-    ) -> "LanguageModelSession":
+        model: SystemLanguageModel | None = None,
+        tools: list[Tool] | None = None,
+    ) -> LanguageModelSession:
         """Create a new session from an existing transcript."""
         # Create model pointer
         model_ptr = model._ptr if model else None
@@ -171,35 +173,35 @@ class LanguageModelSession(_ManagedObject):
     @property
     def is_responding(self) -> bool:
         """Check if the session is currently responding."""
-        return lib.FMLanguageModelSessionIsResponding(self._ptr)
+        return cast(bool, lib.FMLanguageModelSessionIsResponding(self._ptr))
 
-    def _reset_task_state(self):
+    def _reset_task_state(self) -> None:
         """Reset internal task handling state."""
         lib.FMLanguageModelSessionReset(self._ptr)
 
     @overload
     async def respond(
-        self, prompt: Union[str, list[ContentPart]], *, options: Optional[GenerationOptions] = None
+        self, prompt: str | list[ContentPart], *, options: GenerationOptions | None = None
     ) -> str: ...
 
     @overload
     async def respond(
         self,
-        prompt: Union[str, list[ContentPart]],
+        prompt: str | list[ContentPart],
         *,
         generating: type[Generable],
-        options: Optional[GenerationOptions] = None,
-    ) -> Type[Any]: ...
+        options: GenerationOptions | None = None,
+    ) -> type[Any]: ...
 
     async def respond(
         self,
-        prompt: Union[str, list[ContentPart]],
-        generating: Optional[Union[Type[Generable], Generable]] = None,
+        prompt: str | list[ContentPart],
+        generating: type[Generable] | Generable | None = None,
         *,
-        schema: Optional[GenerationSchema] = None,
-        json_schema: Optional[dict] = None,
-        options: Optional[GenerationOptions] = None,
-    ) -> Union[str, Any, GeneratedContent]:
+        schema: GenerationSchema | None = None,
+        json_schema: dict[str, Any] | None = None,
+        options: GenerationOptions | None = None,
+    ) -> str | Any | GeneratedContent:
         """Get a response to a prompt with optional guided generation."""
 
         # Handle multimodal prompt
@@ -243,7 +245,7 @@ class LanguageModelSession(_ManagedObject):
         # Handle basic text response
         return await self._respond_basic(prompt, options)
 
-    async def _respond_basic(self, prompt: str, options: Optional[GenerationOptions] = None) -> str:
+    async def _respond_basic(self, prompt: str, options: GenerationOptions | None = None) -> str:
         """Get a complete basic text response to a prompt."""
         async with self._request_lock:
             loop = asyncio.get_running_loop()
@@ -272,13 +274,13 @@ class LanguageModelSession(_ManagedObject):
                 _unregister_handle(future_handle)
                 lib.FMRelease(task)
                 self._active_task = None
-            return future.result()
+            return cast(str, future.result())
 
     async def _respond_with_schema(
         self,
         prompt: str,
         schema: GenerationSchema,
-        options: Optional[GenerationOptions] = None,
+        options: GenerationOptions | None = None,
     ) -> GeneratedContent:
         """Internal method for guided generation using a GenerationSchema."""
         async with self._request_lock:
@@ -316,13 +318,13 @@ class LanguageModelSession(_ManagedObject):
                 _unregister_handle(future_handle)
                 lib.FMRelease(task)
                 self._active_task = None
-            return future.result()
+            return cast(GeneratedContent, future.result())
 
     async def _respond_with_schema_from_json(
         self,
         prompt: str,
-        json_schema: dict,
-        options: Optional[GenerationOptions] = None,
+        json_schema: dict[str, Any],
+        options: GenerationOptions | None = None,
     ) -> GeneratedContent:
         """Internal method for guided generation using a JSON schema string."""
         async with self._request_lock:
@@ -361,10 +363,10 @@ class LanguageModelSession(_ManagedObject):
                 _unregister_handle(future_handle)
                 lib.FMRelease(task)
                 self._active_task = None
-            return future.result()
+            return cast(GeneratedContent, future.result())
 
     async def stream_response(
-        self, prompt: Union[str, list[ContentPart]], options: Optional[GenerationOptions] = None
+        self, prompt: str | list[ContentPart], options: GenerationOptions | None = None
     ) -> AsyncIterator[str]:
         """Stream response chunks for a prompt (text only)."""
         # Handle multimodal prompt
@@ -387,14 +389,14 @@ class LanguageModelSession(_ManagedObject):
             yield chunk
 
     async def _stream_response_basic(
-        self, prompt: Prompt, options: Optional[GenerationOptions] = None
+        self, prompt: Prompt, options: GenerationOptions | None = None
     ) -> AsyncIterator[str]:
         """Stream basic text response chunks for a prompt."""
         callback = StreamingCallback()
         stream_thread = None
         stream_ptr_holder = [None]
 
-        def _start_stream():
+        def _start_stream() -> None:
             prompt_bytes = prompt.encode("utf-8")
             options_json = json.dumps(options.to_dict()).encode("utf-8") if options else None
             stream_ptr = lib.FMLanguageModelSessionStreamResponse(

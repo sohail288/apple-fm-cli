@@ -3,11 +3,11 @@
 
 import base64
 from dataclasses import dataclass
-from enum import Enum
-from typing import Optional, Union
+from enum import StrEnum
+from typing import Any
 
 
-class ContentPartType(str, Enum):
+class ContentPartType(StrEnum):
     TEXT = "text"
     IMAGE = "image"
     AUDIO = "audio"
@@ -20,7 +20,7 @@ class ImageContentPart:
     data: bytes
     format: str = "png"  # e.g., "png", "jpeg"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "type": "image",
             "image": {"data": base64.b64encode(self.data).decode("utf-8"), "format": self.format},
@@ -34,11 +34,11 @@ class AudioContentPart:
     data: bytes
     format: str = "wav"  # e.g., "wav", "mp3"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "type": "audio",
             "audio": {"data": base64.b64encode(self.data).decode("utf-8"), "format": self.format},
         }
 
 
-ContentPart = Union[str, ImageContentPart, AudioContentPart]
+ContentPart = str | ImageContentPart | AudioContentPart
