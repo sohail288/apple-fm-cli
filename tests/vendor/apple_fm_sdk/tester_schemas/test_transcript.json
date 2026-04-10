@@ -1,0 +1,87 @@
+{
+    "transcript": {
+        "entries": [
+            {
+                "id": "B1B6D2FC-0E40-4986-A288-06ADC8954038",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "You are a helpful math tutor.",
+                        "id": "1ED5C724-83E9-46DC-BF1F-A0207365928F"
+                    }
+                ],
+                "role": "instructions"
+            },
+            {
+                "options": {},
+                "contents": [
+                    {
+                        "id": "8E585019-A37D-4255-B3EE-909C751052A3",
+                        "type": "text",
+                        "text": "What is 5+3?"
+                    }
+                ],
+                "role": "user",
+                "id": "C017ED06-617C-4EC6-B2C6-FF3AF6254F51"
+            },
+            {
+                "id": "0A06AFDA-C98E-4AC6-A31F-34CD56EE14AF",
+                "assets": [
+                    "com.apple.fm.language.instruct_3b.fm_api_generic",
+                    "com.apple.fm.language.instruct_3b.fm_api_generic.draft",
+                    "com.apple.fm.language.instruct_3b.tokenizer"
+                ],
+                "contents": [{ "text": "5 + 3 equals 8.", "id": "0", "type": "text" }],
+                "role": "response"
+            },
+            {
+                "options": {},
+                "role": "user",
+                "contents": [
+                    {
+                        "text": "What is 10-4?",
+                        "id": "96FE8ADA-0627-4B95-9821-ED76CF4B0431",
+                        "type": "text"
+                    }
+                ],
+                "id": "92A5F029-ED61-4AF8-A62B-31889E0912E1"
+            },
+            {
+                "role": "response",
+                "contents": [{ "type": "text", "text": "10 - 4 equals 6.", "id": "0" }],
+                "id": "B5D0E2A3-1CC1-4E04-A688-DE8F08691E57",
+                "assets": [
+                    "com.apple.fm.language.instruct_3b.fm_api_generic.draft",
+                    "com.apple.fm.language.instruct_3b.tokenizer",
+                    "com.apple.fm.language.instruct_3b.fm_api_generic"
+                ]
+            },
+            {
+                "id": "178BD1C8-CEA9-479A-B521-91A3D8F31773",
+                "options": {},
+                "contents": [
+                    {
+                        "type": "text",
+                        "id": "428184D5-C3C2-48DF-B15C-911B10AFCE58",
+                        "text": "What is 2*6?"
+                    }
+                ],
+                "role": "user"
+            },
+            {
+                "role": "response",
+                "id": "00479B03-F726-4CE0-9F41-887CB41AA27C",
+                "contents": [
+                    { "id": "0", "type": "text", "text": "2 multiplied by 6 equals 12." }
+                ],
+                "assets": [
+                    "com.apple.fm.language.instruct_3b.fm_api_generic",
+                    "com.apple.fm.language.instruct_3b.fm_api_generic.draft",
+                    "com.apple.fm.language.instruct_3b.tokenizer"
+                ]
+            }
+        ]
+    },
+    "type": "FoundationModels.Transcript",
+    "version": 1
+}

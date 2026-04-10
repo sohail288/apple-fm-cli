@@ -5,12 +5,13 @@ description = "A simple CLI for Apple Foundation Models"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "apple-fm-sdk",
     "fastapi>=0.135.2",
     "httpx>=0.28.1",
-    "tiktoken>=0.12.0",
     "uvicorn>=0.42.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apple_fm_cli", "src/apple_fm_sdk"]
 
 [project.scripts]
 apple-fm-cli = "apple_fm_cli:main"
@@ -22,6 +23,7 @@ build-backend = "hatchling.build"
 [tool.ruff]
 line-length = 100
 target-version = "py314"
+exclude = ["tests/vendor", "src/apple_fm_sdk/_ctypes_bindings.py"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "ANN", "S", "PT"]
@@ -31,14 +33,13 @@ ignore = ["ANN101", "ANN102", "ANN401", "S101"]
 python_version = "3.14"
 strict = true
 ignore_missing_imports = true
+exclude = ["tests/vendor", "src/apple_fm_sdk/_ctypes_bindings.py"]
 
 [tool.pytest.ini_options]
+norecursedirs = ["tests/vendor"]
 markers = [
     "e2e: marks end-to-end tests (select with '-m e2e')"
 ]
-
-[tool.uv.sources]
-apple-fm-sdk = { git = "https://github.com/apple/python-apple-fm-sdk.git" }
 
 [dependency-groups]
 dev = [
