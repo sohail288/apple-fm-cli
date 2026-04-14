@@ -252,7 +252,7 @@ class Tool(_ManagedObject, ABC):
 
         # Store the async callable
         self._async_callable = self.call
-        self._pending_calls = {}  # Maps call_id to future
+        self._pending_calls: dict[int, asyncio.Future[Any]] = {}  # Maps call_id to future
         self._call_lock = threading.Lock()
 
         # Create the C callback function type matching the bindings

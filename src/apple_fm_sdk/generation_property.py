@@ -57,7 +57,7 @@ class Property:
         name: str,
         type_class: type,
         description: str | None = None,
-        guides: list[GenerationGuide] = None,
+        guides: list[GenerationGuide] | None = None,
     ) -> None:
         """
         Initialize a Property instance.

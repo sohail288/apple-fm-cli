@@ -160,7 +160,7 @@ class Transcript:
         # A transcript doesn't get it's own pointer, it uses the session's pointer
         self.session_ptr = _ptr
 
-    async def to_dict(self) -> dict:
+    async def to_dict(self) -> dict[Any, Any]:
         """Get the current transcript of the session as a dictionary.
 
         This function retrieves the complete session history, including all
@@ -221,10 +221,10 @@ class Transcript:
         # The String wrapper handles memory, so we don't need to manually free
         json_str = str(jsn_string)
         result = json.loads(json_str)
-        return cast(dict[str, Any], result)
+        return cast(dict[Any, Any], result)
 
     @classmethod
-    async def from_dict(cls, dict: dict[str, Any]) -> "Transcript":
+    async def from_dict(cls, dict: dict[Any, Any]) -> Transcript:
         """Create a Transcript from a dictionary representation.
 
         This method deserializes a transcript dictionary (typically loaded from JSON)

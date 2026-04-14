@@ -4,7 +4,7 @@
 import ctypes
 import json
 import logging
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Protocol, cast, get_args, get_origin, get_type_hints, runtime_checkable
 
 from .c_helpers import _ManagedObject
 from .generation_schema import GenerationSchema
@@ -15,7 +15,8 @@ try:
     from . import _ctypes_bindings as lib
 except ImportError as e:
     raise ImportError(
-        "Foundation Models C bindings not found. Please ensure _foundationmodels_ctypes.py is available."
+        "Foundation Models C bindings not found. "
+        "Please ensure _foundationmodels_ctypes.py is available."
     ) from e
 
 
@@ -33,13 +34,13 @@ class GenerationID:
         :param _ptr: Internal C pointer to the GenerationID object
         """
         if _ptr is None:
-            self._ptr = lib.FMGenerationIDCreate()
+            self._ptr = lib.FMGenerationIDCreate()  # type: ignore
         else:
             self._ptr = _ptr
 
     def __str__(self) -> str:
         """Return the string representation of the GenerationID."""
-        cstr = lib.FMGenerationIDGetString(self._ptr)
+        cstr = lib.FMGenerationIDGetString(self._ptr)  # type: ignore
         return ctypes.string_at(cstr).decode("utf-8")
 
     def __repr__(self) -> str:
@@ -64,7 +65,7 @@ class GeneratedContent(_ManagedObject):
     @property
     def id(self) -> GenerationID:
         """Get the unique ID for this generated content."""
-        ptr = lib.FMGeneratedContentGetID(self._ptr)
+        ptr = lib.FMGeneratedContentGetID(self._ptr)  # type: ignore
         return GenerationID(_ptr=ptr)
 
     def value(self, type_class: type, for_property: str) -> Any:
@@ -75,37 +76,10 @@ class GeneratedContent(_ManagedObject):
         :return: The property value converted to the requested type
         :raises ValueError: If the property is not found or cannot be converted
         """
-        prop_bytes = for_property.encode("utf-8")
-        jsn_ptr = lib.FMGeneratedContentGetPropertyJSONString(self._ptr, prop_bytes)
-
-        if not jsn_ptr:
+        data = self.to_dict()
+        if for_property not in data:
             raise ValueError(f"Property '{for_property}' not found in generated content")
-
-        try:
-            json_str = ctypes.string_at(jsn_ptr).decode("utf-8")
-            data = json.loads(json_str)
-
-            # Handle basic types
-            if type_class in (str, int, float, bool):
-                return data
-
-            # Handle nested generables
-            if hasattr(type_class, "_generable") and type_class._generable is True:
-                # Create a temporary GeneratedContent for the nested object
-                # This is a bit of a hack since we're re-parsing JSON
-                # but the C API only gives us JSON for nested properties
-                nested_ptr = lib.FMGeneratedContentCreateFromJSONString(
-                    json_str.encode("utf-8")
-                )
-                try:
-                    nested_content = GeneratedContent(_ptr=nested_ptr)
-                    return type_class._from_generated_content(nested_content)
-                finally:
-                    lib.FMRelease(nested_ptr)
-
-            return data
-        finally:
-            lib.FMRelease(jsn_ptr)
+        return _coerce_generated_value(data[for_property], type_class)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the entire generated content to a dictionary."""
@@ -113,11 +87,45 @@ class GeneratedContent(_ManagedObject):
         if not jsn_ptr:
             return {}
 
-        try:
-            json_str = ctypes.string_at(jsn_ptr).decode("utf-8")
-            return json.loads(json_str)
-        finally:
-            lib.FMRelease(jsn_ptr)
+        json_str = str(jsn_ptr)
+        result = json.loads(json_str)
+        return cast(dict[str, Any], result)
+
+
+def _coerce_generated_value(data: Any, type_class: type) -> Any:
+    """Best-effort conversion from JSON data to the requested annotated type."""
+    if type_class is Any:
+        return data
+
+    origin = get_origin(type_class)
+    args = get_args(type_class)
+
+    if origin is list and isinstance(data, list):
+        item_type = args[0] if args else Any
+        return [_coerce_generated_value(item, item_type) for item in data]
+
+    if origin is not None and args:
+        non_none_types = [arg for arg in args if arg is not type(None)]
+        if len(non_none_types) == 1:
+            return _coerce_generated_value(data, non_none_types[0])
+
+    if type_class in (str, int, float, bool):
+        return data
+
+    if hasattr(type_class, "_generable") and getattr(type_class, "_generable") is True:
+        if not isinstance(data, dict):
+            raise ValueError(f"Expected object data for generable type {type_class.__name__}")
+
+        kwargs: dict[str, Any] = {}
+        type_hints = get_type_hints(type_class)
+        for field_name in type_class.__dataclass_fields__:
+            if field_name not in data:
+                raise ValueError(f"Field '{field_name}' missing from generated content")
+            field_type = type_hints.get(field_name, Any)
+            kwargs[field_name] = _coerce_generated_value(data[field_name], field_type)
+        return type_class(**kwargs)
+
+    return data
 
 
 # MARK: Protocols
@@ -169,6 +177,6 @@ class Generable(ConvertibleFromGeneratedContent, ConvertibleToGeneratedContent, 
         raise NotImplementedError("Subclasses must implement generation_schema class method")
 
     @property
-    def PartiallyGenerated(self) -> type:
+    def PartiallyGenerated(self) -> type:  # noqa: N802
         """Get the partial generation type."""
         raise NotImplementedError("Subclasses must implement PartiallyGenerated property")

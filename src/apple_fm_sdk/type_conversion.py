@@ -7,7 +7,7 @@ Swift type string representations, which are used in schema generation for
 structured output and tool definitions.
 """
 
-from typing import Union
+from typing import Union, get_args, get_origin
 
 
 def _python_type_to_string(python_type: type) -> str:
@@ -61,16 +61,19 @@ def _python_type_to_string(python_type: type) -> str:
         return "boolean"
     elif python_type is list:  # No generic lists allowed
         raise TypeError("Generic list types must specify an element type, for example, List[str]")
-    elif hasattr(python_type, "__origin__"):
-        if python_type.__origin__ is list:
-            element_type = python_type.__args__[0] if python_type.__args__ else str
-            element_type_str = _python_type_to_string(element_type)
-            return f"array<{element_type_str}>"
-        elif python_type.__origin__ is Union:
-            # Handle Optional[T] -> Union[T, None]
-            non_none_types = [arg for arg in python_type.__args__ if arg is not type(None)]
-            if len(non_none_types) == 1:
-                return _python_type_to_string(non_none_types[0])
+
+    origin = get_origin(python_type)
+    args = get_args(python_type)
+
+    if origin is list:
+        element_type = args[0] if args else str
+        element_type_str = _python_type_to_string(element_type)
+        return f"array<{element_type_str}>"
+    elif origin is Union:
+        # Handle Optional[T] -> Union[T, None]
+        non_none_types = [arg for arg in args if arg is not type(None)]
+        if len(non_none_types) == 1:
+            return _python_type_to_string(non_none_types[0])
 
     # Default to the class name
     return getattr(python_type, "__name__", str(python_type))

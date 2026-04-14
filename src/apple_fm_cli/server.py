@@ -44,12 +44,12 @@ def format_openai_chunk(
     role: str | None = None,
     object_type: str = "chat.completion.chunk",
     message_id: str | None = None,
-    usage: dict | None = None,
+    usage: dict[str, Any] | None = None,
     event: str | None = None,
     status: str | None = None,
 ) -> str:
     if object_type == "chat.completion.chunk":
-        chunk = {
+        chunk: dict[str, Any] = {
             "id": id,
             "object": object_type,
             "created": int(time.time()),

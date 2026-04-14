@@ -55,7 +55,7 @@ class GenerationSchema(_ManagedObject):
     description: str | None = None
     properties: list[Property]
     nested_schemas: list[GenerationSchema] = []  # for nested definitions
-    _ptr: "CPointer[Any]"
+    _ptr: CPointer[Any]
 
     def __init__(
         self,
@@ -129,7 +129,7 @@ class GenerationSchema(_ManagedObject):
             for property in self.properties:  # Important! use self.properties here
                 property.convert_to_c(schema_ptr=ptr)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert the GenerationSchema to a dictionary representation.
 

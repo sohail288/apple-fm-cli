@@ -18,9 +18,9 @@ from .generable import (
     Generable,
     GeneratedContent,
     GenerationID,
-    GenerationSchema,
 )
 from .generation_property import Property
+from .generation_schema import GenerationSchema
 
 logger = logging.getLogger(__name__)
 
@@ -221,20 +221,21 @@ def _apply_generable_decorator(cls: type, description: str | None) -> type[Gener
 
     # Store generable metadata.
     # We need _generable as an alternative to protocols for certain dynamic type scenarios.
-    cls._generable = True
-    cls._generable_description = description
+    cls._generable = True  # type: ignore[attr-defined]
+    cls._generable_description = description  # type: ignore[attr-defined]
 
-    cls.generation_schema = classmethod(generation_schema)  # makes schema generation a class method
+    # makes schema generation a class method
+    cls.generation_schema = classmethod(generation_schema)  # type: ignore[attr-defined]
 
     # Add ConvertibleFromGeneratedContent support
-    cls._from_generated_content = classmethod(_from_generated_content)
+    cls._from_generated_content = classmethod(_from_generated_content)  # type: ignore[attr-defined]
 
     # Add ConvertibleToGeneratedContent support
-    cls.generated_content = property(generated_content)
+    cls.generated_content = property(generated_content)  # type: ignore[attr-defined]
 
     # Create PartiallyGenerated inner class
     try:
-        cls.PartiallyGenerated = create_partially_generated(cls)
+        cls.PartiallyGenerated = create_partially_generated(cls)  # type: ignore[attr-defined]
     except Exception as e:
         raise GenerableDecoratorError(
             f"Failed to create PartiallyGenerated class for '{cls.__name__}': {e}\n\n"
@@ -398,7 +399,7 @@ def generated_content(self: Any) -> GeneratedContent:
 
 # Add _from_generated_content to PartiallyGenerated
 def partial_from_generated_content(
-    cls: Any, partial_cls: Any, content: "GeneratedContent"
+    cls: Any, partial_cls: Any, content: GeneratedContent
 ) -> Any:
     """Create partial instance from GeneratedContent."""
     kwargs: dict[str, Any] = {"id": content.id}

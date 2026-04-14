@@ -46,6 +46,7 @@ from typing import Any, cast
 
 from .errors import (
     FoundationModelsError,
+    GenerationError,
     GenerationErrorCode,
     _status_code_to_exception,
 )
@@ -109,7 +110,10 @@ def _unregister_handle(handle_ptr: Any) -> None:
         It's safe to call with None or an already-unregistered handle.
     """
     if handle_ptr:
-        handle_addr = cast(int, handle_ptr.value) if isinstance(handle_ptr, c_void_p) else cast(int, handle_ptr)
+        if isinstance(handle_ptr, c_void_p):
+            handle_addr = cast(int, handle_ptr.value)
+        else:
+            handle_addr = cast(int, handle_ptr)
         with _handle_lock:
             _active_handles.pop(handle_addr, None)
 
@@ -132,7 +136,10 @@ def _safe_from_handle(handle_ptr: Any) -> Any | None:
     if not handle_ptr:
         return None
 
-    handle_addr = cast(int, handle_ptr.value) if isinstance(handle_ptr, c_void_p) else cast(int, handle_ptr)
+    if isinstance(handle_ptr, c_void_p):
+        handle_addr = cast(int, handle_ptr.value)
+    else:
+        handle_addr = cast(int, handle_ptr)
     with _handle_lock:
         return _active_handles.get(handle_addr, None)
 
@@ -265,7 +272,7 @@ class _ManagedObject:
 
 
 # Use the callback type from ctypes bindings instead of redefining it
-@lib.FMLanguageModelSessionResponseCallback
+@lib.FMLanguageModelSessionResponseCallback  # type: ignore
 def _session_callback(status: int, content: Any, length: int, future_handle: Any) -> None:
     """ctypes callback function."""
 
@@ -314,8 +321,7 @@ def _session_callback(status: int, content: Any, length: int, future_handle: Any
             logger.error(f"Unhandled Exception in session callback cleanup: {error}")
 
 
-# Use the callback type from the bindings
-@lib.FMLanguageModelSessionStructuredResponseCallback
+@lib.FMLanguageModelSessionStructuredResponseCallback  # type: ignore
 def _session_structured_callback(status: int, content_ptr: Any, future_handle: Any) -> None:
     """ctypes callback function."""
     from .generable import GeneratedContent  # Import here to avoid circular import
@@ -346,13 +352,15 @@ def _session_structured_callback(status: int, content_ptr: Any, future_handle: A
                 # Release the content pointer if error occurred
                 generated_content = GeneratedContent(_ptr=content_ptr)
                 content_ptr_owned = True  # GeneratedContent now owns it
-                debug_info = str(generated_content._content_dict)
+                debug_info = str(generated_content.to_dict())
                 del generated_content  # Ensure release
 
             # Convert status code to specific error
-            error = _status_code_to_exception(status, debug_description=debug_info)
+            gen_error: GenerationError = _status_code_to_exception(
+                status, debug_description=debug_info
+            )
             asyncio.run_coroutine_threadsafe(
-                _set_future_exception(future, error), future.get_loop()
+                _set_future_exception(future, gen_error), future.get_loop()
             )
             return
 
@@ -453,12 +461,12 @@ class StreamingCallback:
         self.completed = threading.Event()
 
         # Use the callback type from ctypes bindings
-        @lib.FMLanguageModelSessionResponseCallback
+        @lib.FMLanguageModelSessionResponseCallback  # type: ignore
         def _callback_impl(status: int, content: Any, length: int, user_info: Any) -> None:
             try:
                 if status != GenerationErrorCode.SUCCESS:
                     # Convert status code to specific error
-                    self.error = _status_code_to_exception(status)
+                    self.error = cast(FoundationModelsError, _status_code_to_exception(status))
                     self.queue.put(None)  # Signal end
                     self.completed.set()
                     return
