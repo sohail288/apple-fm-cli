@@ -1,4 +1,8 @@
+import dataclasses
+import importlib
 import json
+import sys
+import types
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -6,11 +10,71 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from apple_fm_cli.server import (
-    APPLE_FM_CODEX_INSTRUCTIONS,
-    app,
-    build_responses_prompt,
-)
+
+def install_apple_fm_sdk_stub() -> None:
+    fm_stub = cast(Any, types.ModuleType("apple_fm_sdk"))
+
+    class GenerationSchema:
+        pass
+
+    class GeneratedContent:
+        pass
+
+    class Generable:
+        pass
+
+    class Tool:
+        def __init__(self) -> None:
+            pass
+
+    class SystemLanguageModel:
+        def is_available(self) -> tuple[bool, str]:
+            return False, "Foundation Models unavailable in test environment"
+
+    class LanguageModelSession:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
+    def guide(*args: Any, **kwargs: Any) -> Any:
+        return dataclasses.field(default=None)
+
+    def generable(arg: Any = None) -> Any:
+        def apply(cls: type[Any]) -> type[Any]:
+            if not dataclasses.is_dataclass(cls):
+                cls = dataclasses.dataclass(cls)
+            cls_any = cast(Any, cls)
+
+            def generation_schema(inner_cls: type[Any]) -> GenerationSchema:
+                return GenerationSchema()
+
+            cls_any._generable = True
+            cls_any.generation_schema = classmethod(generation_schema)
+            return cls
+
+        if isinstance(arg, type):
+            return apply(arg)
+        return apply
+
+    fm_stub.GenerationSchema = GenerationSchema
+    fm_stub.GeneratedContent = GeneratedContent
+    fm_stub.Generable = Generable
+    fm_stub.Tool = Tool
+    fm_stub.SystemLanguageModel = SystemLanguageModel
+    fm_stub.LanguageModelSession = LanguageModelSession
+    fm_stub.guide = guide
+    fm_stub.generable = generable
+    sys.modules["apple_fm_sdk"] = fm_stub
+
+
+try:
+    import apple_fm_sdk  # noqa: F401
+except ImportError:
+    install_apple_fm_sdk_stub()
+
+server_module = importlib.import_module("apple_fm_cli.server")
+APPLE_FM_CODEX_INSTRUCTIONS = server_module.APPLE_FM_CODEX_INSTRUCTIONS
+app = server_module.app
+build_responses_prompt = server_module.build_responses_prompt
 
 client = TestClient(app)
 

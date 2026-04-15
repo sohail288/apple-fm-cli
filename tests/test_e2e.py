@@ -7,7 +7,13 @@ from pathlib import Path
 
 import pytest
 
-import apple_fm_sdk as fm
+try:
+    import apple_fm_sdk as fm
+except ImportError as error:
+    pytest.skip(
+        f"Foundation Models C bindings unavailable: {error}",
+        allow_module_level=True,
+    )
 
 
 def run_cli(installed_cli: Path, *args: str) -> subprocess.CompletedProcess[str]:
