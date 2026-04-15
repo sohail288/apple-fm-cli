@@ -3,6 +3,7 @@ import asyncio
 import dataclasses
 import html
 import json
+import logging
 import re
 import sys
 from collections.abc import Sequence
@@ -11,6 +12,8 @@ from typing import Any, cast
 import httpx
 
 import apple_fm_sdk as fm
+
+logger = logging.getLogger(__name__)
 
 
 def map_json_schema_to_type_and_guide(
@@ -50,7 +53,7 @@ def map_json_schema_to_type_and_guide(
     return final_type, dataclasses.MISSING
 
 
-def create_dynamic_dataclass(name: str, schema: dict[str, Any]) -> type:
+def create_dynamic_dataclass(name: str, schema: dict[str, Any]) -> type[fm.Generable]:
     fields: list[Any] = []
     for prop_name, prop_schema in schema.get("properties", {}).items():
         # Use specific variable names to avoid type reuse issues
@@ -80,7 +83,8 @@ def extract_tool_argument(args: Any, *property_names: str) -> Any:
         for property_name in property_names:
             try:
                 return args.value(str, for_property=property_name)
-            except Exception:
+            except Exception as error:
+                logger.debug("Tool argument lookup failed for %s: %s", property_name, error)
                 continue
 
     return None
@@ -265,7 +269,10 @@ async def run_query(
         if output_format == "json" and output_schema_str:
             schema_data = json.loads(output_schema_str)
             final_gen_type = create_dynamic_dataclass("GeneratedObject", schema_data)
-            generated_content = await session.respond(query, schema=final_gen_type.generation_schema())
+            generated_content = await session.respond(
+                query,
+                schema=final_gen_type.generation_schema(),
+            )
             print(json.dumps(generated_content.to_dict(), indent=2))
         else:
             final_resp = await session.respond(query)

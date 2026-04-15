@@ -193,6 +193,15 @@ class LanguageModelSession(_ManagedObject):
         options: GenerationOptions | None = None,
     ) -> type[Any]: ...
 
+    @overload
+    async def respond(
+        self,
+        prompt: str | list[ContentPart],
+        *,
+        schema: GenerationSchema,
+        options: GenerationOptions | None = None,
+    ) -> GeneratedContent: ...
+
     async def respond(
         self,
         prompt: str | list[ContentPart],

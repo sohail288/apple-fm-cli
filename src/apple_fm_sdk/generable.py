@@ -112,13 +112,14 @@ def _coerce_generated_value(data: Any, type_class: type) -> Any:
     if type_class in (str, int, float, bool):
         return data
 
-    if hasattr(type_class, "_generable") and getattr(type_class, "_generable") is True:
+    if hasattr(type_class, "_generable") and type_class._generable is True:
         if not isinstance(data, dict):
             raise ValueError(f"Expected object data for generable type {type_class.__name__}")
 
         kwargs: dict[str, Any] = {}
         type_hints = get_type_hints(type_class)
-        for field_name in type_class.__dataclass_fields__:
+        dataclass_type = cast(Any, type_class)
+        for field_name in dataclass_type.__dataclass_fields__:
             if field_name not in data:
                 raise ValueError(f"Field '{field_name}' missing from generated content")
             field_type = type_hints.get(field_name, Any)
