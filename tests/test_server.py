@@ -28,8 +28,14 @@ def install_apple_fm_sdk_stub() -> None:
             pass
 
     class SystemLanguageModel:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            pass
+
         def is_available(self) -> tuple[bool, str]:
             return False, "Foundation Models unavailable in test environment"
+
+    class SystemLanguageModelGuardrails:
+        PERMISSIVE_CONTENT_TRANSFORMATIONS = "permissive"
 
     class LanguageModelSession:
         def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -60,6 +66,7 @@ def install_apple_fm_sdk_stub() -> None:
     fm_stub.Generable = Generable
     fm_stub.Tool = Tool
     fm_stub.SystemLanguageModel = SystemLanguageModel
+    fm_stub.SystemLanguageModelGuardrails = SystemLanguageModelGuardrails
     fm_stub.LanguageModelSession = LanguageModelSession
     fm_stub.guide = guide
     fm_stub.generable = generable
