@@ -5,7 +5,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from apple_fm_cli import BashTool, GoogleSearchTool
+try:
+    from apple_fm_cli import BashTool, GoogleSearchTool
+except ImportError as error:
+    pytest.skip(
+        f"Foundation Models C bindings unavailable: {error}",
+        allow_module_level=True,
+    )
 
 
 @pytest.mark.asyncio

@@ -3,66 +3,94 @@ import asyncio
 import dataclasses
 import html
 import json
+import logging
 import re
 import sys
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, cast
+
+import httpx
 
 import apple_fm_sdk as fm
-import httpx
+
+logger = logging.getLogger(__name__)
 
 
 def map_json_schema_to_type_and_guide(
     prop_name: str, prop_schema: dict[str, Any]
 ) -> tuple[type, Any]:
     t = prop_schema.get("type", "string")
-    py_type: type = str
+    # Default to str
+    final_type: type = str
 
     if t == "integer":
-        py_type = int
+        final_type = int
     elif t == "number":
-        py_type = float
+        final_type = float
     elif t == "boolean":
-        py_type = bool
+        final_type = bool
     elif t == "array":
         items_schema = prop_schema.get("items", {})
         item_type, _ = map_json_schema_to_type_and_guide(f"{prop_name}_item", items_schema)
-        py_type = list[item_type]  # type: ignore
+        # Type variable used as type is tricky for mypy in dynamic creation
+        final_type = list
     elif t == "object":
-        py_type = create_dynamic_dataclass(f"{prop_name.capitalize()}Type", prop_schema)
+        final_type = create_dynamic_dataclass(f"{prop_name.capitalize()}Type", prop_schema)
 
     guide_kwargs: dict[str, Any] = {}
     if "description" in prop_schema:
         guide_kwargs["description"] = prop_schema["description"]
     if "minimum" in prop_schema and "maximum" in prop_schema:
-        guide_kwargs["range"] = (prop_schema["minimum"], prop_schema["maximum"])
+        # Use Any to satisfy mypy for range assignment
+        cast(Any, guide_kwargs)["range"] = (prop_schema["minimum"], prop_schema["maximum"])
 
     if guide_kwargs:
-        desc = guide_kwargs.pop("description", "")
-        return py_type, fm.guide(desc, **guide_kwargs)
+        # Use str to ensure it matches GenerationGuide signature
+        desc_val = str(guide_kwargs.pop("description", ""))
+        guide_val = fm.guide(desc_val, **guide_kwargs)
+        return final_type, guide_val
 
-    return py_type, dataclasses.MISSING
+    return final_type, dataclasses.MISSING
 
 
-def create_dynamic_dataclass(name: str, schema: dict[str, Any]) -> type:
+def create_dynamic_dataclass(name: str, schema: dict[str, Any]) -> type[fm.Generable]:
     fields: list[Any] = []
     for prop_name, prop_schema in schema.get("properties", {}).items():
-        py_type, guide = map_json_schema_to_type_and_guide(prop_name, prop_schema)
-        if guide is not dataclasses.MISSING:
-            fields.append((prop_name, py_type, guide))
+        # Use specific variable names to avoid type reuse issues
+        target_type, target_guide = map_json_schema_to_type_and_guide(prop_name, prop_schema)
+        if target_guide is not dataclasses.MISSING:
+            fields.append((prop_name, target_type, target_guide))
         else:
-            fields.append((prop_name, py_type))
+            fields.append((prop_name, target_type))
 
-    cls = dataclasses.make_dataclass(name, fields)
-    return fm.generable(cls)  # type: ignore
+    dynamic_cls = dataclasses.make_dataclass(name, fields)
+    return cast(type, fm.generable(dynamic_cls))
 
 
 @fm.generable
 @dataclasses.dataclass
 class BashParams:
-    command: str = fm.guide("The shell command to run")
+    command: str = fm.guide("The shell command to run")  # type: ignore[assignment]
 
 
-class BashTool(fm.Tool):  # type: ignore
+def extract_tool_argument(args: Any, *property_names: str) -> Any:
+    for property_name in property_names:
+        value = getattr(args, property_name, None)
+        if value is not None:
+            return value
+
+    if hasattr(args, "value"):
+        for property_name in property_names:
+            try:
+                return args.value(str, for_property=property_name)
+            except Exception as error:
+                logger.debug("Tool argument lookup failed for %s: %s", property_name, error)
+                continue
+
+    return None
+
+
+class BashTool(fm.Tool):
     name = "bash"
     description = (
         "Executes a shell command on the user's local machine and returns the output. "
@@ -71,18 +99,16 @@ class BashTool(fm.Tool):  # type: ignore
 
     @property
     def arguments_schema(self) -> fm.GenerationSchema:
-        return BashParams.generation_schema()  # type: ignore
+        return BashParams.generation_schema()  # type: ignore[attr-defined, no-any-return]
 
     async def call(self, args: Any) -> str:
-        command = getattr(args, "command", None)
-        if command is None and hasattr(args, "value"):
-            command = args.value(str, for_property="command")
+        extracted_command = extract_tool_argument(args, "command")
 
-        if not command:
+        if not extracted_command:
             return "Error: Could not extract command from tool arguments."
 
         process = await asyncio.create_subprocess_shell(
-            command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+            extracted_command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
         out = ""
@@ -96,10 +122,10 @@ class BashTool(fm.Tool):  # type: ignore
 @fm.generable
 @dataclasses.dataclass
 class GoogleSearchParams:
-    query: str = fm.guide("The search query")
+    query: str = fm.guide("The search query")  # type: ignore[assignment]
 
 
-class GoogleSearchTool(fm.Tool):  # type: ignore
+class GoogleSearchTool(fm.Tool):
     name = "google_search"
     description = (
         "Searches the web for current events, facts, or information. "
@@ -108,14 +134,12 @@ class GoogleSearchTool(fm.Tool):  # type: ignore
 
     @property
     def arguments_schema(self) -> fm.GenerationSchema:
-        return GoogleSearchParams.generation_schema()  # type: ignore
+        return GoogleSearchParams.generation_schema()  # type: ignore[attr-defined, no-any-return]
 
     async def call(self, args: Any) -> str:
-        query = getattr(args, "query", None)
-        if query is None and hasattr(args, "value"):
-            query = args.value(str, for_property="query")
+        final_query = extract_tool_argument(args, "query", "query_text")
 
-        if not query:
+        if not final_query:
             return "Error: Could not extract query from tool arguments."
 
         user_agent = (
@@ -131,7 +155,7 @@ class GoogleSearchTool(fm.Tool):  # type: ignore
             try:
                 # Search on DuckDuckGo Lite
                 search_url = "https://lite.duckduckgo.com/lite/"
-                response = await client.post(search_url, data={"q": query})
+                response = await client.post(search_url, data={"q": final_query})
                 response.raise_for_status()
                 html_content = response.text
 
@@ -158,7 +182,7 @@ class GoogleSearchTool(fm.Tool):  # type: ignore
                     return "No results found."
 
                 # Prepare the final report
-                output = [f"Search results for: {query}\n"]
+                output = [f"Search results for: {final_query}\n"]
 
                 # Extract top 3 links
                 top_links = []
@@ -234,37 +258,29 @@ async def run_query(
     session_kwargs: dict[str, Any] = {}
     if tool_instances:
         session_kwargs["tools"] = tool_instances
+        session_kwargs["instructions"] = (
+            "Use the available tools whenever the answer depends on filesystem, shell, or web "
+            "information. After tool use, answer directly from the tool results."
+        )
 
     session = fm.LanguageModelSession(**session_kwargs)
 
     try:
         if output_format == "json" and output_schema_str:
-            schema = json.loads(output_schema_str)
-            dynamic_class = create_dynamic_dataclass("GeneratedObject", schema)
-            response = await session.respond(query, generating=dynamic_class)
-
-            # Print as JSON using dataclasses.asdict
-            if dataclasses.is_dataclass(response):
-                print(json.dumps(dataclasses.asdict(response), indent=2))  # type: ignore
-            else:
-                # Fallback for non-dataclass objects (though our dynamic ones should be)
-                def clean_obj(obj: Any) -> Any:
-                    if dataclasses.is_dataclass(obj):
-                        return dataclasses.asdict(obj)  # type: ignore
-                    if isinstance(obj, list):
-                        return [clean_obj(x) for x in obj]
-                    if hasattr(obj, "__dict__"):
-                        return {k: clean_obj(v) for k, v in vars(obj).items()}
-                    return obj
-
-                print(json.dumps(clean_obj(response), indent=2))
+            schema_data = json.loads(output_schema_str)
+            final_gen_type = create_dynamic_dataclass("GeneratedObject", schema_data)
+            generated_content = await session.respond(
+                query,
+                schema=final_gen_type.generation_schema(),
+            )
+            print(json.dumps(generated_content.to_dict(), indent=2))
         else:
-            response = await session.respond(query)
+            final_resp = await session.respond(query)
             # if we have tool usage, the response object from sdk usually formats correctly
-            if hasattr(response, "text"):
-                print(response.text)
+            if hasattr(final_resp, "text"):
+                print(final_resp.text)
             else:
-                print(response)
+                print(final_resp)
 
     except Exception as e:
         print(f"Error generating response: {e}", file=sys.stderr)
@@ -275,43 +291,61 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Query Apple Intelligence via CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
-    # 'query' command (default behavior)
-    query_parser = subparsers.add_parser("query", help="Query the model (default)")
-    query_parser.add_argument("-q", "--query", type=str, required=True, help="The query to send")
+    query_parser = subparsers.add_parser("query", help="Query the model")
+    query_parser.add_argument("query", help="The prompt to send to the model")
     query_parser.add_argument(
-        "--output",
-        type=str,
-        choices=["text", "json"],
-        default="text",
-        help="Output format (text/json)",
+        "--format", choices=["text", "json"], default="text", help="Output format"
     )
-    query_parser.add_argument("--output-schema", type=str, help="JSON schema for output")
-    query_parser.add_argument("--tools", type=str, help="Comma-separated tools (bash,google_search)")
+    query_parser.add_argument("--schema", help="JSON schema for guided generation (if format=json)")
+    query_parser.add_argument("--tools", help="Comma-separated list of tools to enable")
 
     # 'server' command
-    server_parser = subparsers.add_parser("server", help="Start an OpenAI-compatible server")
-    server_parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind to")
-    server_parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    server_parser = subparsers.add_parser("server", help="Start the OpenAI-compatible API server")
+    server_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")  # noqa: S104
+    server_parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
 
-    # If no arguments or just -q ..., we should handle it gracefully for backwards compatibility
-    # but the sub-parser makes it slightly different. 
-    # Let's check sys.argv and inject 'query' if first arg looks like -q or --query
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] in ("-q", "--query", "--output", "--tools"):
-        sys.argv.insert(1, "query")
-
-    args = parser.parse_args()
+    args = parse_cli_args(sys.argv[1:], parser)
 
     if args.command == "query":
-        if args.output == "json" and not args.output_schema:
-            print("Error: --output-schema is required when --output is json", file=sys.stderr)
-            sys.exit(1)
-        asyncio.run(run_query(args.query, args.output, args.output_schema, args.tools))
+        asyncio.run(run_query(args.query, args.format, args.schema, args.tools))
     elif args.command == "server":
         from apple_fm_cli.server import run_server
+
         run_server(host=args.host, port=args.port)
     else:
         parser.print_help()
+
+
+def build_legacy_query_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Query Apple Intelligence via CLI")
+    parser.add_argument("-q", "--query", required=True, help="The prompt to send to the model")
+    parser.add_argument(
+        "--output",
+        dest="format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format",
+    )
+    parser.add_argument(
+        "--output-schema",
+        dest="schema",
+        help="JSON schema for guided generation (if output=json)",
+    )
+    parser.add_argument("--tools", help="Comma-separated list of tools to enable")
+    return parser
+
+
+def parse_cli_args(argv: Sequence[str], root_parser: argparse.ArgumentParser) -> argparse.Namespace:
+    if argv and argv[0] == "server":
+        return root_parser.parse_args(list(argv))
+
+    if argv and argv[0] == "query":
+        return root_parser.parse_args(list(argv))
+
+    legacy_parser = build_legacy_query_parser()
+    args = legacy_parser.parse_args(list(argv))
+    args.command = "query"
+    return args
 
 
 if __name__ == "__main__":
