@@ -9,12 +9,33 @@ A small **command-line interface** and **local HTTP server** that drive Apple’
 
 ## Install
 
+**From PyPI** (macOS, Python 3.14+):
+
+```bash
+pip install apple-fm-cli
+# or: uv pip install apple-fm-cli
+```
+
+**From a git checkout** (editable):
+
 ```bash
 pip install -e .
 # or: uv pip install -e .
 ```
 
 Entry point: `apple-fm-cli`.
+
+The published wheel includes a prebuilt **`libFoundationModels.dylib`** (Apple silicon / arm64). To rebuild it after changing `foundation-models-c`, run `swift build -c release` in `src/apple_fm_sdk/foundation-models-c` and copy `.build/*/release/libFoundationModels.dylib` to `src/apple_fm_sdk/lib/` before building distributions.
+
+### Publishing to PyPI (maintainers)
+
+**CI (recommended):** GitHub Actions workflow [`.github/workflows/publish.yml`](.github/workflows/publish.yml) runs on **published releases** and on **manual dispatch**. One-time setup: in [PyPI → Account → Publishing](https://pypi.org/manage/account/publishing/), add a **trusted publisher** for this repo with workflow file **`publish.yml`** (no GitHub Environment unless you configure both sides to use one). Then:
+
+1. Bump the version in `pyproject.toml` and merge.
+2. Rebuild and commit **`src/apple_fm_sdk/lib/libFoundationModels.dylib`** if the Swift bridge changed.
+3. Create a **GitHub Release** from a tag (or use **Actions → Publish to PyPI → Run workflow** after a tag points at the release commit).
+
+**Manual upload:** `uv run --with build python -m build` then `uv run --with twine twine upload dist/*` using an API token. Prefer **trusted publishing** in CI over storing long-lived tokens in `~/.pypirc` or GitHub secrets.
 
 ## CLI
 
