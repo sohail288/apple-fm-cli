@@ -108,6 +108,19 @@ class LanguageModelSession(_ManagedObject):
         """Measure how many tokens a string uses in the current session."""
         return self._model.token_count(text)
 
+    @staticmethod
+    def _estimate_token_count(text: str) -> int:
+        """Estimate token count when the native API is unavailable.
+
+        The native Foundation Models token-count API can return ``-1`` on systems
+        where that API is not exposed. In that case we fall back to the same
+        heuristic already used by the compatibility layer: roughly 1 token per
+        4 characters, with non-empty text consuming at least one token.
+        """
+        if not text:
+            return 0
+        return max(1, (len(text) + 3) // 4)
+
     async def token_usage(self) -> dict[str, int]:
         """Get the current token usage for the entire session transcript."""
         t_dict = await self.transcript.to_dict()
@@ -128,6 +141,8 @@ class LanguageModelSession(_ManagedObject):
                     text_content += content.get("text", "")
 
             count = self.token_count(text_content)
+            if count < 0:
+                count = self._estimate_token_count(text_content)
 
             if role == "instructions":
                 usage["instructions_tokens"] += count
