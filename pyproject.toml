@@ -1,17 +1,53 @@
 [project]
 name = "apple-fm-cli"
-version = "0.1.1"
-description = "A simple CLI for Apple Foundation Models"
+version = "0.1.2"
+description = "CLI and OpenAI-compatible HTTP server for Apple Foundation Models (Apple Intelligence)"
 readme = "README.md"
 requires-python = ">=3.14"
+license = { text = "Mixed; apple_fm_sdk carries Apple Inc. copyright — see file headers." }
+authors = [{ name = "Sohail" }]
+keywords = [
+    "apple-intelligence",
+    "apple-foundation-models",
+    "foundation-models",
+    "openai-compatible",
+    "codex",
+    "fastapi",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: Other/Proprietary License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "fastapi>=0.135.2",
     "httpx>=0.28.1",
     "uvicorn>=0.42.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/sohail288/apple-fm-cli"
+Repository = "https://github.com/sohail288/apple-fm-cli"
+Issues = "https://github.com/sohail288/apple-fm-cli/issues"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "tests/vendor/**",
+    "sdk-binary-analyzer/**",
+    "src/apple_fm_sdk/foundation-models-c/.build/**",
+]
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/apple_fm_cli", "src/apple_fm_sdk"]
+exclude = [
+    "**/foundation-models-c/**",
+]
 
 [project.scripts]
 apple-fm-cli = "apple_fm_cli:main"
