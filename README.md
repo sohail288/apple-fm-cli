@@ -29,11 +29,20 @@ The published wheel includes a prebuilt **`libFoundationModels.dylib`** (Apple s
 
 ### Publishing to PyPI (maintainers)
 
-**CI (recommended):** GitHub Actions workflow [`.github/workflows/publish.yml`](.github/workflows/publish.yml) runs on **published releases** and on **manual dispatch**. One-time setup: in [PyPI → Account → Publishing](https://pypi.org/manage/account/publishing/), add a **trusted publisher** for this repo with workflow file **`publish.yml`** (no GitHub Environment unless you configure both sides to use one). Then:
+**Automated (recommended):** [`.github/workflows/publish.yml`](.github/workflows/publish.yml) runs when you **push a version tag** `v*` (for example `v0.1.3`). It checks that the tag matches **`version` in `pyproject.toml`**, builds, uploads to PyPI, then **creates a GitHub Release** (with generated notes) if one does not already exist. One-time: configure [PyPI trusted publishing](https://pypi.org/manage/account/publishing/) for workflow **`publish.yml`**.
 
-1. Bump the version in `pyproject.toml` and merge.
+Typical release steps:
+
+1. Bump **`version`** in **`pyproject.toml`** and run **`uv lock`** if you track **`uv.lock`** in git.
 2. Rebuild and commit **`src/apple_fm_sdk/lib/libFoundationModels.dylib`** if the Swift bridge changed.
-3. Create a **GitHub Release** from a tag (or use **Actions → Publish to PyPI → Run workflow** after a tag points at the release commit).
+3. Commit and push to **`main`**, then tag and push the tag:
+
+   ```bash
+   git tag v0.1.3
+   git push origin v0.1.3
+   ```
+
+**Manual dispatch:** **Actions → Publish to PyPI → Run workflow** still works for the current branch (no tag check); use sparingly.
 
 **Manual upload:** `uv run --with build python -m build` then `uv run --with twine twine upload dist/*` using an API token. Prefer **trusted publishing** in CI over storing long-lived tokens in `~/.pypirc` or GitHub secrets.
 
