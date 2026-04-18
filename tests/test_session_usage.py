@@ -10,6 +10,12 @@ except ImportError as error:
         allow_module_level=True,
     )
 
+if not hasattr(fm.LanguageModelSession, "token_usage"):
+    pytest.skip(
+        "LanguageModelSession token_usage is unavailable in the test fallback stub",
+        allow_module_level=True,
+    )
+
 
 class FakeTranscript:
     async def to_dict(self) -> dict[str, Any]:
