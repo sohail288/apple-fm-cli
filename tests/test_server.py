@@ -1,89 +1,13 @@
 import dataclasses
-import importlib
 import json
-import sys
-import types
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, cast
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
-
-def install_apple_fm_sdk_stub() -> None:
-    fm_stub = cast(Any, types.ModuleType("apple_fm_sdk"))
-
-    class GenerationSchema:
-        pass
-
-    class GeneratedContent:
-        pass
-
-    class Generable:
-        pass
-
-    class Tool:
-        def __init__(self) -> None:
-            pass
-
-    class SystemLanguageModel:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-        def is_available(self) -> tuple[bool, str]:
-            return False, "Foundation Models unavailable in test environment"
-
-    class SystemLanguageModelGuardrails:
-        PERMISSIVE_CONTENT_TRANSFORMATIONS = "permissive"
-
-    class LanguageModelSession:
-        def __init__(self, *args: Any, **kwargs: Any) -> None:
-            pass
-
-    def guide(*args: Any, **kwargs: Any) -> Any:
-        return dataclasses.field(default=None)
-
-    def generable(arg: Any = None) -> Any:
-        def apply(cls: type[Any]) -> type[Any]:
-            if not dataclasses.is_dataclass(cls):
-                cls = dataclasses.dataclass(cls)
-            cls_any = cast(Any, cls)
-
-            def generation_schema(inner_cls: type[Any]) -> GenerationSchema:
-                return GenerationSchema()
-
-            cls_any._generable = True
-            cls_any.generation_schema = classmethod(generation_schema)
-            return cls
-
-        if isinstance(arg, type):
-            return apply(arg)
-        return apply
-
-    fm_stub.GenerationSchema = GenerationSchema
-    fm_stub.GeneratedContent = GeneratedContent
-    fm_stub.Generable = Generable
-    fm_stub.Tool = Tool
-    fm_stub.SystemLanguageModel = SystemLanguageModel
-    fm_stub.SystemLanguageModelGuardrails = SystemLanguageModelGuardrails
-    fm_stub.LanguageModelSession = LanguageModelSession
-    fm_stub.guide = guide
-    fm_stub.generable = generable
-    sys.modules["apple_fm_sdk"] = fm_stub
-
-
-try:
-    import apple_fm_sdk  # noqa: F401
-except ImportError:
-    install_apple_fm_sdk_stub()
-
-server_module = importlib.import_module("apple_fm_cli.server")
-APPLE_FM_CODEX_INSTRUCTIONS = server_module.APPLE_FM_CODEX_INSTRUCTIONS
-app = server_module.app
-build_responses_prompt = server_module.build_responses_prompt
-
-client = TestClient(app)
+from apple_fm_cli.server import APPLE_FM_CODEX_INSTRUCTIONS, build_responses_prompt, create_app
 
 
 def parse_sse_events(body: str) -> list[tuple[str | None, str]]:
@@ -119,30 +43,76 @@ def last_session_instructions(mock_fm_sdk: dict[str, Any]) -> str | None:
 
 
 @pytest.fixture
-def mock_fm_sdk() -> Generator[dict[str, Any]]:
-    with (
-        patch("apple_fm_sdk.SystemLanguageModel") as mock_model,
-        patch("apple_fm_sdk.LanguageModelSession") as mock_session,
-    ):
-        mock_model_inst = MagicMock()
-        mock_model_inst.is_available.return_value = (True, "")
-        mock_model.return_value = mock_model_inst
+def mock_fm_sdk() -> dict[str, Any]:
+    class GenerationSchema:
+        pass
 
-        mock_session_inst = MagicMock()
-        mock_session_inst.respond = AsyncMock()
-        mock_session_inst.token_usage = AsyncMock(
-            return_value={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
-        )
-        mock_session.return_value = mock_session_inst
+    class SystemLanguageModel:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.args = args
+            self.kwargs = kwargs
 
-        yield {
-            "model": mock_model_inst,
-            "session": mock_session_inst,
-            "session_ctor": mock_session,
-        }
+        def is_available(self) -> tuple[bool, str]:
+            return True, ""
+
+    class SystemLanguageModelGuardrails:
+        PERMISSIVE_CONTENT_TRANSFORMATIONS = "permissive"
+
+    def guide(*args: Any, **kwargs: Any) -> Any:
+        return dataclasses.field(default=None)
+
+    def generable(arg: Any = None) -> Any:
+        def apply(cls: type[Any]) -> type[Any]:
+            if not dataclasses.is_dataclass(cls):
+                cls = dataclasses.dataclass(cls)
+            cls_any = cast(Any, cls)
+
+            def generation_schema(inner_cls: type[Any]) -> GenerationSchema:
+                return GenerationSchema()
+
+            cls_any._generable = True
+            cls_any.generation_schema = classmethod(generation_schema)
+            return cls
+
+        if isinstance(arg, type):
+            return apply(arg)
+        return apply
+
+    mock_session_ctor = MagicMock()
+    mock_session_inst = MagicMock()
+    mock_session_inst.respond = AsyncMock()
+    mock_session_inst.token_usage = AsyncMock(
+        return_value={"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15}
+    )
+    mock_session_ctor.return_value = mock_session_inst
+
+    fake_sdk = type(
+        "FakeFoundationModelsSDK",
+        (),
+        {
+            "GenerationSchema": GenerationSchema,
+            "SystemLanguageModel": SystemLanguageModel,
+            "SystemLanguageModelGuardrails": SystemLanguageModelGuardrails,
+            "LanguageModelSession": mock_session_ctor,
+            "guide": staticmethod(guide),
+            "generable": staticmethod(generable),
+        },
+    )()
+
+    return {
+        "sdk": fake_sdk,
+        "session": mock_session_inst,
+        "session_ctor": mock_session_ctor,
+    }
 
 
-def test_chat_completions_basic(mock_fm_sdk: dict[str, Any]) -> None:
+@pytest.fixture
+def client(mock_fm_sdk: dict[str, Any]) -> Generator[TestClient]:
+    with TestClient(create_app(fm_sdk=mock_fm_sdk["sdk"], request_dump_path=None)) as test_client:
+        yield test_client
+
+
+def test_chat_completions_basic(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="Hello world")
 
@@ -161,7 +131,7 @@ def test_chat_completions_basic(mock_fm_sdk: dict[str, Any]) -> None:
     assert data["usage"]["completion_tokens"] > 0
 
 
-def test_chat_completions_streaming(mock_fm_sdk: dict[str, Any]) -> None:
+def test_chat_completions_streaming(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "Hello "
@@ -182,7 +152,7 @@ def test_chat_completions_streaming(mock_fm_sdk: dict[str, Any]) -> None:
     assert response.text.rstrip().endswith("data: [DONE]")
 
 
-def test_chat_completions_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
+def test_chat_completions_json_schema(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     from dataclasses import make_dataclass
 
@@ -215,7 +185,7 @@ def test_chat_completions_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
     assert content["age"] == 3
 
 
-def test_responses_api_basic(mock_fm_sdk: dict[str, Any]) -> None:
+def test_responses_api_basic(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2 + 2 equals 4.")
     mock_fm_sdk["session"].token_usage = AsyncMock(
@@ -237,7 +207,7 @@ def test_responses_api_basic(mock_fm_sdk: dict[str, Any]) -> None:
     assert data["usage"]["total_tokens"] == 15
 
 
-def test_responses_api_streaming(mock_fm_sdk: dict[str, Any]) -> None:
+def test_responses_api_streaming(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     async def mock_stream(prompt: Any) -> AsyncGenerator[str]:
         yield "The answer "
@@ -276,6 +246,7 @@ def test_responses_api_streaming(mock_fm_sdk: dict[str, Any]) -> None:
 
 
 def test_responses_api_streaming_deduplicates_multiline_snapshots(
+    client: TestClient,
     mock_fm_sdk: dict[str, Any],
 ) -> None:
     # Given
@@ -308,6 +279,7 @@ def test_responses_api_streaming_deduplicates_multiline_snapshots(
 
 
 def test_responses_api_codex_interactive_streaming_keeps_deltas_and_includes_final_text_content(
+    client: TestClient,
     mock_fm_sdk: dict[str, Any],
 ) -> None:
     # Given
@@ -347,6 +319,7 @@ def test_responses_api_codex_interactive_streaming_keeps_deltas_and_includes_fin
 
 
 def test_responses_api_codex_exec_streaming_uses_final_item_content(
+    client: TestClient,
     mock_fm_sdk: dict[str, Any],
 ) -> None:
     # Given
@@ -383,7 +356,7 @@ def test_responses_api_codex_exec_streaming_uses_final_item_content(
     assert completed["response"]["output"] == []
 
 
-def test_responses_api_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
+def test_responses_api_json_schema(client: TestClient, mock_fm_sdk: dict[str, Any]) -> None:
     # Given
     from dataclasses import make_dataclass
 
@@ -422,7 +395,9 @@ def test_responses_api_json_schema(mock_fm_sdk: dict[str, Any]) -> None:
     assert content["age"] == 3
 
 
-def test_responses_api_adapts_codex_instructions(mock_fm_sdk: dict[str, Any]) -> None:
+def test_responses_api_adapts_codex_instructions(
+    client: TestClient, mock_fm_sdk: dict[str, Any]
+) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2")
     codex_instructions = (
@@ -484,7 +459,9 @@ def test_build_responses_prompt_preserves_codex_conversation_history() -> None:
     )
 
 
-def test_responses_api_preserves_regular_instructions(mock_fm_sdk: dict[str, Any]) -> None:
+def test_responses_api_preserves_regular_instructions(
+    client: TestClient, mock_fm_sdk: dict[str, Any]
+) -> None:
     # Given
     mock_fm_sdk["session"].respond.return_value = MagicMock(text="2 + 2 equals 4.")
 
