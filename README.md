@@ -44,6 +44,35 @@ apple-fm-cli server --host 0.0.0.0 --port 8000
 - `POST /v1/chat/completions`
 - `POST /v1/responses`
 
+### Codex
+
+1. Start the server (see above), e.g. on port `8000`.
+2. Add a provider and profile to **`~/.codex/config.toml`**:
+
+   ```toml
+   [model_providers.apple]
+   name = "apple"
+   base_url = "http://localhost:8000/v1"
+   env_key = "OPENAI_API_KEY"
+
+   [profiles.apple]
+   model = "fm"
+   model_provider = "apple"
+   model_context_window = 4096
+   ```
+
+3. Run Codex with that profile:
+
+   ```bash
+   codex -p apple
+   ```
+
+`env_key` is the environment variable Codex uses for the bearer token. The local server does not need a real OpenAI key; set `OPENAI_API_KEY` to any non-empty placeholder if your Codex build requires it to be present.
+
+### Other agent harnesses
+
+Anything that can target an **OpenAI-compatible** HTTP API (Chat Completions and/or Responses, including SSE) can point **`base_url`** at `http://<host>:<port>/v1` and use a **model id** string of your choice—the server echoes the requested model name. Prefer a **context window** that matches what the on-device model can handle (4096 is a reasonable default for local sessions). If the client insists on an API key, keep using a dummy value in the configured env var unless you add auth in front of the server yourself.
+
 ## Layout
 
 | Path | Role |
