@@ -47,6 +47,18 @@ jobs:
       - name: Set up Python 3.14
         run: uv python install 3.14
 
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff (Linting)
+        run: uv run ruff check .
+
+      - name: Run Mypy (Type Checking)
+        run: uv run mypy src tests
+
+      - name: Run Unit Tests (Pytest)
+        run: uv run pytest -v
+
       - name: Verify tag matches pyproject.toml
         if: github.ref_type == 'tag'
         run: |
