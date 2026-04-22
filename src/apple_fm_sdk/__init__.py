@@ -15,6 +15,7 @@ from .core import (
     SystemLanguageModelGuardrails,
     SystemLanguageModelUnavailableReason,
     SystemLanguageModelUseCase,
+    get_sentence_embedding,
 )
 from .errors import (
     AssetsUnavailableError,
@@ -56,6 +57,7 @@ __all__ = [
     "SystemLanguageModelUseCase",
     "SystemLanguageModelGuardrails",
     "SystemLanguageModelUnavailableReason",
+    "get_sentence_embedding",
     "Tool",
     "FoundationModelsError",
     "GenerationError",

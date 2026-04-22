@@ -7,6 +7,7 @@ import Foundation
 import FoundationModels
 import FoundationModelsCDeclarations
 import Synchronization
+import NaturalLanguage
 
 final class TaskBox {
   let task: Task<(), Never>
@@ -124,6 +125,39 @@ public func FMSystemLanguageModelGetContextSize(model: FMSystemLanguageModelRef)
   let model = Unmanaged<SystemLanguageModel>.fromOpaque(model).takeUnretainedValue()
   // In 26.3, contextSize appears to be a synchronous property based on the compiler warning
   return Int32(model.contextSize)
+}
+
+// MARK: - Embeddings
+
+@_cdecl("FMGetSentenceEmbedding")
+public func FMGetSentenceEmbedding(
+  text: UnsafePointer<CChar>,
+  outCount: UnsafeMutablePointer<Int32>
+) -> UnsafeMutablePointer<Double>? {
+  let textString = String(cString: text)
+  guard let embedding = NLEmbedding.sentenceEmbedding(for: .english) else {
+    outCount.pointee = 0
+    return nil
+  }
+
+  guard let vector = embedding.vector(for: textString) else {
+    outCount.pointee = 0
+    return nil
+  }
+
+  let count = vector.count
+  outCount.pointee = Int32(count)
+  
+  let result = UnsafeMutablePointer<Double>.allocate(capacity: count)
+  for i in 0..<count {
+    result[i] = vector[i]
+  }
+  return result
+}
+
+@_cdecl("FMFreeEmbedding")
+public func FMFreeEmbedding(vector: UnsafeMutablePointer<Double>?) {
+  vector?.deallocate()
 }
 
 @_cdecl("FMLanguageModelSessionCreateDefault")

@@ -295,10 +295,7 @@ def build_legacy_query_parser() -> argparse.ArgumentParser:
 
 
 def parse_cli_args(argv: Sequence[str], root_parser: argparse.ArgumentParser) -> argparse.Namespace:
-    if argv and argv[0] == "server":
-        return root_parser.parse_args(list(argv))
-
-    if argv and argv[0] == "query":
+    if argv and argv[0] in ("server", "query", "embeddings"):
         return root_parser.parse_args(list(argv))
 
     legacy_parser = build_legacy_query_parser()
@@ -323,10 +320,20 @@ def main() -> None:
     server_parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")  # noqa: S104
     server_parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
 
+    embeddings_parser = subparsers.add_parser("embeddings", help="Generate sentence embeddings")
+    embeddings_parser.add_argument("text", help="The text to embed")
+
     args = parse_cli_args(sys.argv[1:], parser)
 
     if args.command == "query":
         asyncio.run(run_query(args.query, args.format, args.schema, args.tools))
+    elif args.command == "embeddings":
+        try:
+            vector = fm.get_sentence_embedding(args.text)
+            print(json.dumps(vector))
+        except Exception as e:
+            print(f"Error generating embeddings: {e}", file=sys.stderr)
+            sys.exit(1)
     elif args.command == "server":
         from apple_fm_cli.server import run_server
 

@@ -1420,3 +1420,20 @@ for _lib in _libs.values():
 # No inserted files
 
 # No prefix-stripping
+
+# Embedding functions
+for _lib in _libs.values():
+    if not _lib.has("FMGetSentenceEmbedding", "cdecl"):
+        continue
+    FMGetSentenceEmbedding = _lib.get("FMGetSentenceEmbedding", "cdecl")
+    FMGetSentenceEmbedding.argtypes = [String, POINTER(c_int)]
+    FMGetSentenceEmbedding.restype = POINTER(c_double)
+    break
+
+for _lib in _libs.values():
+    if not _lib.has("FMFreeEmbedding", "cdecl"):
+        continue
+    FMFreeEmbedding = _lib.get("FMFreeEmbedding", "cdecl")
+    FMFreeEmbedding.argtypes = [POINTER(c_double)]
+    FMFreeEmbedding.restype = None
+    break

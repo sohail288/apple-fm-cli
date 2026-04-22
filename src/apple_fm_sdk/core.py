@@ -157,3 +157,30 @@ class SystemLanguageModel(_ManagedObject):
         :rtype: int
         """
         return int(lib.FMSystemLanguageModelGetContextSize(self._ptr))
+
+
+def get_sentence_embedding(text: str) -> list[float]:
+    """Generate a sentence embedding vector for the provided text.
+
+    This function uses the Natural Language framework's sentence embedding
+    capability to generate a high-dimensional vector representing the
+    semantic meaning of the input text.
+
+    :param text: The text to generate an embedding for
+    :type text: str
+    :return: A list of floats representing the embedding vector (typically 512 dimensions)
+    :rtype: list[float]
+    :raises RuntimeError: If the embedding cannot be generated
+    """
+    count = ctypes.c_int()
+    vector_ptr = lib.FMGetSentenceEmbedding(text.encode("utf-8"), ctypes.byref(count))
+
+    if not vector_ptr:
+        raise RuntimeError(f"Failed to generate embedding for: {text}")
+
+    try:
+        # Convert the C double array to a Python list
+        result = [float(vector_ptr[i]) for i in range(count.value)]
+        return result
+    finally:
+        lib.FMFreeEmbedding(vector_ptr)

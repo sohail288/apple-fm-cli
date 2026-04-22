@@ -52,6 +52,11 @@ FMSystemLanguageModelRef _Nonnull FMSystemLanguageModelCreate(FMSystemLanguageMo
 bool FMSystemLanguageModelIsAvailable(FMSystemLanguageModelRef _Nonnull ref, FMSystemLanguageModelUnavailableReason *_Nullable unavailableReason);
 int FMSystemLanguageModelGetTokenCount(FMSystemLanguageModelRef _Nonnull model, const char *_Nonnull text);
 int FMSystemLanguageModelGetContextSize(FMSystemLanguageModelRef _Nonnull model);
+
+// Embedding functions
+double *_Nullable FMGetSentenceEmbedding(const char *_Nonnull text, int *_Nonnull outCount);
+void FMFreeEmbedding(double *_Nullable vector);
+
 FMLanguageModelSessionRef _Nonnull FMLanguageModelSessionCreateDefault();
 FMLanguageModelSessionRef _Nonnull FMLanguageModelSessionCreateFromSystemLanguageModel(FMSystemLanguageModelRef _Nullable model, const char *_Nullable instructions, FMBridgedToolRef _Nullable *_Nullable tools, int toolCount);
 FMLanguageModelSessionRef _Nonnull FMLanguageModelSessionCreateFromTranscript(FMLanguageModelSessionRef _Nonnull transcriptSession, FMSystemLanguageModelRef _Nullable model, FMBridgedToolRef _Nullable *_Nullable tools, int toolCount);
