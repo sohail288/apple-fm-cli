@@ -14,7 +14,7 @@ permissions:
 jobs:
   lint-and-test:
     name: Lint and Test
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 
