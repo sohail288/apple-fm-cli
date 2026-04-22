@@ -1,37 +1,60 @@
-# Publish sdists/wheels to PyPI.
-#
-# Setup (one-time on https://pypi.org/manage/account/publishing/ ):
-#   - Add a "pending" trusted publisher: GitHub → repo sohail288/apple-fm-cli
-#     → workflow: publish.yml → environment: (leave blank unless you use one below)
-#   - After the first successful upload, the project is linked.
-#
-# Triggers:
-#   - Push a version tag matching v* (e.g. v0.1.3) after bumping version in pyproject.toml
-#   - Manual: Actions → Publish to PyPI → Run workflow (uses the checked-out ref)
-#
-# After a successful PyPI upload from a tag, a GitHub Release is created (if missing) with
-# auto-generated notes. We do not use release: published to avoid double-uploads when GitHub
-# creates a tag from the Releases UI.
-#
-# Optional: create a GitHub Environment named "pypi" with protection rules, then set
-#   environment: pypi
-# below and register that environment name on PyPI when adding the trusted publisher.
-
-name: Publish to PyPI
+name: CI & CD
 
 on:
   push:
-    tags:
-      - "v*"
-  workflow_dispatch:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
   id-token: write
 
 jobs:
+  lint-and-test:
+    name: Lint and Test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.14
+
+      - name: Install dependencies
+        run: uv sync --all-extras --dev
+
+      - name: Run Ruff (Linting)
+        run: uv run ruff check .
+
+      - name: Run Mypy (Type Checking)
+        run: uv run mypy src tests
+
+      - name: Run Unit Tests (Pytest)
+        run: uv run pytest -v
+
+      - name: Run E2E Tests (will skip if hardware/AI is missing)
+        run: |
+          set +e
+          uv run pytest -v -m e2e
+          status=$?
+          set -e
+          if [ "$status" -eq 5 ]; then
+            echo "No E2E tests were selected on this runner; treating as success."
+            exit 0
+          fi
+          exit "$status"
+
   publish:
-    name: Build and upload
+    name: Build and Publish to PyPI
+    needs: lint-and-test
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -47,20 +70,7 @@ jobs:
       - name: Set up Python 3.14
         run: uv python install 3.14
 
-      - name: Install dependencies
-        run: uv sync --all-extras --dev
-
-      - name: Run Ruff (Linting)
-        run: uv run ruff check .
-
-      - name: Run Mypy (Type Checking)
-        run: uv run mypy src tests
-
-      - name: Run Unit Tests (Pytest)
-        run: uv run pytest -v
-
       - name: Verify tag matches pyproject.toml
-        if: github.ref_type == 'tag'
         run: |
           TAG_VER="${GITHUB_REF_NAME#v}"
           PKG_VER="$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
@@ -76,7 +86,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Create GitHub Release
-        if: github.ref_type == 'tag' && success()
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
