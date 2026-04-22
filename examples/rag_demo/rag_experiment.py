@@ -2,18 +2,16 @@
 # dependencies = [
 #   "qdrant-client",
 #   "httpx",
+#   "apple-fm-cli",
 # ]
 # ///
 import sys
 import os
-
-# Add the project src to path so we can import apple_fm_sdk
-sys.path.append(os.path.abspath(os.path.join(os.getcwd(), "src")))
-
+import asyncio
+import json
 import apple_fm_sdk as fm
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams, PointStruct
-import json
 
 def run_rag_demo():
     # 1. Initialize Qdrant and Apple FM
