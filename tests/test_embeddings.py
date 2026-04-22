@@ -1,5 +1,5 @@
 import apple_fm_sdk as fm
-import pytest
+
 
 def test_get_sentence_embedding() -> None:
     text = "Apple Intelligence is powerful."
