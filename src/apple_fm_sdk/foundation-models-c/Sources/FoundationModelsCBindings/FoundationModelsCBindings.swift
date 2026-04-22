@@ -91,41 +91,56 @@ public func FMSystemLanguageModelIsAvailable(
 // MARK: - Session creation
 
 @_cdecl("FMSystemLanguageModelGetTokenCount")
-public func FMSystemLanguageModelGetTokenCount(
-  model: FMSystemLanguageModelRef,
-  text: UnsafePointer<CChar>
-) -> Int32 {
+public func FMSystemLanguageModelGetTokenCount(model: FMSystemLanguageModelRef, text: UnsafePointer<CChar>) -> Int32 {
   let model = Unmanaged<SystemLanguageModel>.fromOpaque(model).takeUnretainedValue()
   let textString = String(cString: text)
-  
+
+  #if os(macOS) || os(iOS)
+  // Check if we are on macOS 26+ / iOS 26+ which has the new async API
   if #available(macOS 26.4, iOS 26.4, *) {
     let semaphore = DispatchSemaphore(value: 0)
     let result = Mutex<Int>(-1)
-    
+
     Task {
       do {
-        let count = try await model.tokenCount(for: .init(textString))
+        // macOS 26 uses .init(textString) for some reason in this SDK context? 
+        // Actually it's likely just String.
+        let count = try await model.tokenCount(for: textString)
         result.withLock { $0 = count }
       } catch {
         print("Error in tokenCount: \(error)")
       }
       semaphore.signal()
     }
-    
+
     _ = semaphore.wait(timeout: .now() + 5.0)
     return Int32(result.withLock { $0 })
   } else {
-    // Fallback for older OS versions - return -1 to indicate unavailable native API
-    return -1
+    // macOS 15 and earlier
+    return Int32(model.tokenCount(for: textString))
   }
+  #else
+  return -1
+  #endif
 }
 
 @_cdecl("FMSystemLanguageModelGetContextSize")
 public func FMSystemLanguageModelGetContextSize(model: FMSystemLanguageModelRef) -> Int32 {
   let model = Unmanaged<SystemLanguageModel>.fromOpaque(model).takeUnretainedValue()
-  // In 26.3, contextSize appears to be a synchronous property based on the compiler warning
-  return Int32(model.contextSize)
+
+  #if os(macOS) || os(iOS)
+  if #available(macOS 26.0, iOS 26.0, *) {
+    // macOS 26 renamed contextSize to maxContextSize
+    return Int32(model.maxContextSize)
+  } else {
+    // macOS 15
+    return Int32(model.contextSize)
+  }
+  #else
+  return -1
+  #endif
 }
+
 
 // MARK: - Embeddings
 
