@@ -11,3 +11,4 @@ wheels/
 
 # Native bridge — ship only the shared dylib in wheels, not static archives
 src/apple_fm_sdk/lib/*.a
+\n# Local notes\nnotes/
