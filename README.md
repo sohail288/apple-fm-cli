@@ -63,6 +63,20 @@ apple-fm-cli query --tools bash,google_search "What’s in README.md in the cwd?
 
 Legacy-style flags are still accepted: `-q` / `--query`, `--output`, `--output-schema`.
 
+## Local embedding benchmark
+
+From the repo root, measure end-to-end latency for **512-d** English sentence embeddings (native `NLEmbedding` or the HTTP `POST /v1/embeddings` route on the local server):
+
+```bash
+uv run python scripts/benchmark_embeddings.py
+uv run python scripts/benchmark_embeddings.py -n 100 -w 5
+uv run python scripts/benchmark_embeddings.py --json
+# With the server: apple-fm-cli server --port 8000
+uv run python scripts/benchmark_embeddings.py --mode http --base-url http://127.0.0.1:8000
+```
+
+Use `--batch` to time multi-string requests (HTTP sends one `POST` per iteration; native runs a tight loop). Results print throughput, dimension, and latency percentiles.
+
 ## Server
 
 Starts a **FastAPI** app that mimics parts of the **OpenAI Chat Completions**, **Embeddings**, and **Responses** APIs (including SSE for streaming), so tools that expect those endpoints can point at your machine instead of a cloud provider. Large agent system prompts are truncated heuristically to fit smaller local context windows.
@@ -110,6 +124,7 @@ Anything that can target an **OpenAI-compatible** HTTP API (Chat Completions and
 |------|------|
 | `src/apple_fm_sdk/` | Session, tools, guided generation, tokenizer, native bridge bindings |
 | `src/apple_fm_cli/` | `query` / `server`, built-in tools, schema → `Generable` helpers |
+| `scripts/` | Helpers, e.g. `benchmark_embeddings.py` for local latency/throughput |
 | `notes/` | Design notes (Responses SSE lifecycle, native bridge, e2e testing) |
 
 ## Licensing

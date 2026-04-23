@@ -44,6 +44,10 @@ from .generable_utils import generable
 from .generation_guide import GenerationGuide, GuideType, guide
 from .generation_options import GenerationOptions, SamplingMode, SamplingModeType
 from .generation_schema import GenerationSchema
+from .retrieval import (
+    cosine_similarity,
+    retrieve_top_k,
+)
 from .session import LanguageModelSession
 from .tokenizer import Tokenizer
 from .tool import Tool
@@ -58,6 +62,8 @@ __all__ = [
     "SystemLanguageModelGuardrails",
     "SystemLanguageModelUnavailableReason",
     "get_sentence_embedding",
+    "cosine_similarity",
+    "retrieve_top_k",
     "Tool",
     "FoundationModelsError",
     "GenerationError",

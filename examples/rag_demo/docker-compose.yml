@@ -1,0 +1,20 @@
+# Local Qdrant for the RAG demo (512-d Apple sentence embeddings + HTTP API).
+# From this directory:  docker compose up -d
+# Stop / remove:         docker compose down
+# Wipe Qdrant data:      docker compose down -v
+services:
+  qdrant:
+    # Pin for reproducible demos; `latest` also works: docker.io/qdrant/qdrant
+    image: qdrant/qdrant:v1.13.1
+    container_name: apple-fm-rag-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    # Optional: require API key in production. Local demo: leave unauthenticated.
+    # environment:
+    #   - QDRANT__SERVICE__API_KEY=your-secret
+
+volumes:
+  qdrant_storage:
