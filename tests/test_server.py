@@ -537,10 +537,11 @@ def test_embeddings_errors(client: TestClient) -> None:
     assert client.post("/v1/embeddings", json={"input": ""}).status_code == 400
     assert client.post("/v1/embeddings", json={"input": []}).status_code == 400
     assert client.post("/v1/embeddings", json={"input": 42}).status_code == 400
-    assert (
-        client.post("/v1/embeddings", json={"input": "ok", "encoding_format": "float16"}).status_code
-        == 400
+    bad_fmt = client.post(
+        "/v1/embeddings",
+        json={"input": "ok", "encoding_format": "float16"},
     )
+    assert bad_fmt.status_code == 400
 
 
 def test_build_responses_prompt_strips_environment_context_for_codex_mode() -> None:
