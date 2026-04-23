@@ -25,7 +25,7 @@ pip install -e .
 
 Entry point: `apple-fm-cli`.
 
-The published wheel includes a prebuilt **`libFoundationModels.dylib`** (Apple silicon / arm64). To rebuild it after changing `foundation-models-c`, run `swift build -c release` in `src/apple_fm_sdk/foundation-models-c` and copy `.build/*/release/libFoundationModels.dylib` to `src/apple_fm_sdk/lib/` before building distributions.
+The published wheel includes a prebuilt native bridge (Apple silicon / arm64), typically **`libapple_fm_bridge.dylib`** (or the legacy name **`libFoundationModels.dylib`**). To rebuild it after changing `foundation-models-c`, run `swift build -c release` in `src/apple_fm_sdk/foundation-models-c` and copy `.build/*/release/libapple_fm_bridge.dylib` to `src/apple_fm_sdk/lib/` before building distributions.
 
 ### Publishing to PyPI (maintainers)
 
@@ -34,7 +34,7 @@ The published wheel includes a prebuilt **`libFoundationModels.dylib`** (Apple s
 Typical release steps:
 
 1. Bump **`version`** in **`pyproject.toml`** and run **`uv lock`** if you track **`uv.lock`** in git.
-2. Rebuild and commit **`src/apple_fm_sdk/lib/libFoundationModels.dylib`** if the Swift bridge changed.
+2. Rebuild and commit **`src/apple_fm_sdk/lib/libapple_fm_bridge.dylib`** (or **`libFoundationModels.dylib`**) if the Swift bridge changed.
 3. Commit and push to **`main`**, then tag and push the tag:
 
    ```bash

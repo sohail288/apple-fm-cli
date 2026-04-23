@@ -33,9 +33,15 @@ jobs:
       - name: Build Swift bridge
         run: |
           cd src/apple_fm_sdk/foundation-models-c
-          swift build -c release
+          # If we are on macos-26, we enable the 26.4+ native API compatibility flag
+          if [[ "$RUNNER_OS" == "macOS" && "$(sw_vers -productVersion)" == 26* ]]; then
+            swift build -c release -Xswiftc -DFOUNDATION_MODELS_26_4_API
+          else
+            swift build -c release
+          fi
           mkdir -p ../lib
-          cp .build/release/libFoundationModels.dylib ../lib/
+          BIN="$(swift build -c release --show-bin-path)"
+          cp "${BIN}/libapple_fm_bridge.dylib" ../lib/
 
       - name: Run Ruff (Linting)
         run: uv run ruff check .
@@ -80,9 +86,15 @@ jobs:
       - name: Build Swift bridge
         run: |
           cd src/apple_fm_sdk/foundation-models-c
-          swift build -c release
+          # If we are on macos-26, we enable the 26.4+ native API compatibility flag
+          if [[ "$RUNNER_OS" == "macOS" && "$(sw_vers -productVersion)" == 26* ]]; then
+            swift build -c release -Xswiftc -DFOUNDATION_MODELS_26_4_API
+          else
+            swift build -c release
+          fi
           mkdir -p ../lib
-          cp .build/release/libFoundationModels.dylib ../lib/
+          BIN="$(swift build -c release --show-bin-path)"
+          cp "${BIN}/libapple_fm_bridge.dylib" ../lib/
 
       - name: Verify tag matches pyproject.toml
         run: |

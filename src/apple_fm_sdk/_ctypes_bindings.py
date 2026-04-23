@@ -859,7 +859,37 @@ del loaderclass
 add_library_search_dirs([os.path.join(os.path.dirname(__file__), "lib")])
 
 # Begin libraries
-_libs["FoundationModels"] = load_library("FoundationModels")
+# Load the shipped dylib by absolute path. Generic names like "FoundationModels" or
+# "apple_fm_bridge" can resolve to a different .dylib (e.g. the system framework) that
+# does not export our C entry points, which breaks Python with missing symbols.
+def _load_apple_fm_bridge():
+    base = os.path.join(os.path.dirname(__file__), "lib")
+    # Product name is `apple_fm_bridge` in Package.swift; some workflows still copy
+    # the historical filename `libFoundationModels.dylib`.
+    candidates = (
+        os.path.join(base, "libapple_fm_bridge.dylib"),
+        os.path.join(base, "libFoundationModels.dylib"),
+    )
+    for rel in candidates:
+        bundled = os.path.abspath(rel)
+        if not os.path.isfile(bundled):
+            continue
+        try:
+            return DarwinLibraryLoader.Lookup(bundled)
+        except OSError as exc:
+            raise ImportError(
+                f"Failed to load Apple FM native bridge at {bundled!s}: {exc!s}. "
+                "If you are not on macOS 26+, the Apple Foundation Models system frameworks "
+                "are unavailable and this build cannot run. A missing Swift tokenCount symbol "
+                "usually means the bridge must be rebuilt from this repository on macOS 26+."
+            ) from exc
+    raise ImportError(
+        f"apple_fm_sdk: native bridge not found. Tried: {[os.path.abspath(c) for c in candidates]!s}. "
+        "Build src/apple_fm_sdk/foundation-models-c and copy the release .dylib into apple_fm_sdk/lib/."
+    )
+
+
+_libs["FoundationModels"] = _load_apple_fm_bridge()
 
 # 1 libraries
 # End libraries

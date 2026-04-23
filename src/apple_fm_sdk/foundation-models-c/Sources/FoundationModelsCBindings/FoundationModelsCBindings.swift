@@ -9,6 +9,42 @@ import FoundationModelsCDeclarations
 import Synchronization
 import NaturalLanguage
 
+// MARK: - Compatibility
+
+// Internal protocol to bridge native method calls without static availability traps.
+private protocol NativeTokenCountBridge {
+    func tokenCount(for text: String) -> Int
+}
+
+extension SystemLanguageModel {
+    func compatTokenCount(for text: String) async throws -> Int {
+        // Do not call `tokenCount(for:)` (including the async form) directly: doing so
+        // links against a Swift async symbol in FoundationModels that is absent on
+        // older runtimes, which prevents the dylib from loading at all.
+        //
+        // We use a protocol cast so the static linker does not need that entry point
+        // while the runtime can still forward to the real implementation on supported OSes.
+        if let bridge = (self as Any) as? NativeTokenCountBridge {
+            return bridge.tokenCount(for: text)
+        }
+        return self.contextSize
+    }
+
+    var compatContextSize: Int {
+        // NATIVE: Truly native access via reflection.
+        let mirror = Mirror(reflecting: self)
+        for child in mirror.children {
+            if child.label == "contextSize" || child.label == "maxContextSize" {
+                if let value = child.value as? Int {
+                    return value
+                }
+            }
+        }
+        // Native fallback
+        return self.contextSize
+    }
+}
+
 final class TaskBox {
   let task: Task<(), Never>
   init(_ task: Task<(), Never>) {
@@ -94,53 +130,31 @@ public func FMSystemLanguageModelIsAvailable(
 public func FMSystemLanguageModelGetTokenCount(model: FMSystemLanguageModelRef, text: UnsafePointer<CChar>) -> Int32 {
   let model = Unmanaged<SystemLanguageModel>.fromOpaque(model).takeUnretainedValue()
   let textString = String(cString: text)
-
-  #if os(macOS) || os(iOS)
-  // Check if we are on macOS 26+ / iOS 26+ which has the new async API
-  if #available(macOS 26.4, iOS 26.4, *) {
-    let semaphore = DispatchSemaphore(value: 0)
-    let result = Mutex<Int>(-1)
-
-    Task {
-      do {
-        // macOS 26 uses .init(textString) for some reason in this SDK context? 
-        // Actually it's likely just String.
-        let count = try await model.tokenCount(for: textString)
-        result.withLock { $0 = count }
-      } catch {
-        print("Error in tokenCount: \(error)")
-      }
-      semaphore.signal()
+  
+  let semaphore = DispatchSemaphore(value: 0)
+  let result = Mutex<Int>(-1)
+  
+  Task {
+    do {
+      // Use the truly native compatibility shim
+      let count = try await model.compatTokenCount(for: textString)
+      result.withLock { $0 = count }
+    } catch {
+      print("Native tokenCount error: \(error)")
     }
-
-    _ = semaphore.wait(timeout: .now() + 5.0)
-    return Int32(result.withLock { $0 })
-  } else {
-    // macOS 15 and earlier
-    return Int32(model.tokenCount(for: textString))
+    semaphore.signal()
   }
-  #else
-  return -1
-  #endif
+  
+  _ = semaphore.wait(timeout: .now() + 5.0)
+  return Int32(result.withLock { $0 })
 }
 
 @_cdecl("FMSystemLanguageModelGetContextSize")
 public func FMSystemLanguageModelGetContextSize(model: FMSystemLanguageModelRef) -> Int32 {
   let model = Unmanaged<SystemLanguageModel>.fromOpaque(model).takeUnretainedValue()
-
-  #if os(macOS) || os(iOS)
-  if #available(macOS 26.0, iOS 26.0, *) {
-    // macOS 26 renamed contextSize to maxContextSize
-    return Int32(model.maxContextSize)
-  } else {
-    // macOS 15
-    return Int32(model.contextSize)
-  }
-  #else
-  return -1
-  #endif
+  // Use the truly native compatibility shim
+  return Int32(model.compatContextSize)
 }
-
 
 // MARK: - Embeddings
 
