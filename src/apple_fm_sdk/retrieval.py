@@ -29,7 +29,7 @@ def cosine_similarity(a: Sequence[float], b: Sequence[float]) -> float:
 
 def retrieve_top_k(
     query: Sequence[float],
-    corpus: list[tuple[str, Sequence[float]]],
+    corpus: Sequence[tuple[str, Sequence[float]]],
     k: int,
 ) -> list[tuple[str, float]]:
     """
