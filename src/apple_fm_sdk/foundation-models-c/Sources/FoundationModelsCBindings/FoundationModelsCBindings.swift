@@ -27,11 +27,12 @@ extension SystemLanguageModel {
         if let bridge = (self as Any) as? NativeTokenCountBridge {
             return bridge.tokenCount(for: text)
         }
-        return self.contextSize
+        // No sync tokenCount; approximate using reflected context size (see compatContextSize).
+        return compatContextSize
     }
 
     var compatContextSize: Int {
-        // NATIVE: Truly native access via reflection.
+        // Prefer reflection: some SDKs do not expose `contextSize` on the type.
         let mirror = Mirror(reflecting: self)
         for child in mirror.children {
             if child.label == "contextSize" || child.label == "maxContextSize" {
@@ -40,8 +41,9 @@ extension SystemLanguageModel {
                 }
             }
         }
-        // Native fallback
-        return self.contextSize
+        // Unknown — callers treat as non-positive if they need a signal; do not use
+        // `self.contextSize` (not available on all SDK seeds).
+        return 0
     }
 }
 
