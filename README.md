@@ -65,13 +65,14 @@ Legacy-style flags are still accepted: `-q` / `--query`, `--output`, `--output-s
 
 ## Server
 
-Starts a **FastAPI** app that mimics parts of the **OpenAI Chat Completions** and **Responses** APIs (including SSE for streaming), so tools that expect those endpoints can point at your machine instead of a cloud provider. Large agent system prompts are truncated heuristically to fit smaller local context windows.
+Starts a **FastAPI** app that mimics parts of the **OpenAI Chat Completions**, **Embeddings**, and **Responses** APIs (including SSE for streaming), so tools that expect those endpoints can point at your machine instead of a cloud provider. Large agent system prompts are truncated heuristically to fit smaller local context windows.
 
 ```bash
 apple-fm-cli server --host 0.0.0.0 --port 8000
 ```
 
 - `POST /v1/chat/completions`
+- `POST /v1/embeddings` — on-device **512-dimensional** English sentence embeddings (`NaturalLanguage` / `NLEmbedding`); the `model` field is accepted and echoed (OpenAI compatibility) but does not select a different backend.
 - `POST /v1/responses`
 
 ### Codex

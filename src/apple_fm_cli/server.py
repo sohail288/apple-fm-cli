@@ -1,6 +1,8 @@
+import base64
 import dataclasses
 import json
 import logging
+import struct
 import time
 import uuid
 from collections.abc import AsyncGenerator
@@ -8,6 +10,7 @@ from typing import Annotated, Any, cast
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 default_fm: Any | None
 DEFAULT_FM_IMPORT_ERROR: ImportError | None
@@ -177,6 +180,50 @@ def truncate_text(text: str, max_tokens: int = 3000) -> str:
     if len(text) > max_chars:
         return text[:max_chars] + "\n... [truncated] ..."
     return text
+
+
+def _coerce_openai_embedding_inputs(body: dict[str, Any]) -> list[str]:
+    """Normalize OpenAI `input` to a non-empty list of strings."""
+    raw = body.get("input")
+    if raw is None:
+        raise HTTPException(status_code=400, detail="input is required")
+    if isinstance(raw, str):
+        if not raw.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="input must be a non-empty string or non-empty list of strings",
+            )
+        return [raw]
+    if isinstance(raw, list):
+        if not raw:
+            raise HTTPException(status_code=400, detail="input list must not be empty")
+        out: list[str] = []
+        for i, item in enumerate(raw):
+            if not isinstance(item, str):
+                tname = type(item).__name__
+                raise HTTPException(
+                    status_code=400, detail=f"input[{i}] must be a string, not {tname}",
+                )
+            if not item.strip():
+                raise HTTPException(
+                    status_code=400,
+                    detail="each input string must be non-empty",
+                )
+            out.append(item)
+        return out
+    raise HTTPException(
+        status_code=400, detail="input must be a string or an array of strings"
+    )
+
+
+def _format_embedding_value(vec: list[float], encoding_format: str) -> list[float] | str:
+    if encoding_format == "base64":
+        return base64.standard_b64encode(struct.pack(f"<{len(vec)}f", *vec)).decode("ascii")
+    return vec
+
+
+def _rough_token_estimate_for_usage(text: str) -> int:
+    return max(1, (len(text) + 3) // 4)
 
 
 def format_responses_usage(usage_data: dict[str, int]) -> dict[str, int]:
@@ -406,6 +453,67 @@ def create_app(
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e)) from e
+
+    @app.post("/v1/embeddings")
+    async def create_embeddings(
+        request: Request, fm_sdk: Annotated[Any, Depends(get_fm_sdk)]
+    ) -> Any:
+        """OpenAI-compatible embeddings (local NLEnglish 512-d sentence embeddings)."""
+        try:
+            body = await request.json()
+        except Exception as e:
+            raise HTTPException(status_code=400, detail="Invalid JSON body") from e
+
+        model_name = body.get("model", "text-embedding-3-small")
+        encoding_format = body.get("encoding_format", "float")
+        if encoding_format not in ("float", "base64"):
+            raise HTTPException(
+                status_code=400,
+                detail="encoding_format must be 'float' or 'base64'",
+            )
+
+        strings = _coerce_openai_embedding_inputs(body)
+        if len(strings) > 200:
+            raise HTTPException(
+                status_code=400, detail="Too many input strings in one request (max 200)"
+            )
+
+        get_embed = getattr(fm_sdk, "get_sentence_embedding", None)
+        if not callable(get_embed):
+            raise HTTPException(
+                status_code=503, detail="Embeddings are not available in this SDK build"
+            )
+
+        data: list[dict[str, Any]] = []
+        total_tokens = 0
+        for index, text in enumerate(strings):
+            try:
+                vec = await run_in_threadpool(get_embed, text)
+            except RuntimeError as e:
+                raise HTTPException(status_code=500, detail=str(e)) from e
+            if not isinstance(vec, list) or not vec:
+                raise HTTPException(
+                    status_code=500, detail="Embedding provider returned an empty vector"
+                )
+            emb = _format_embedding_value(vec, encoding_format)
+            data.append(
+                {
+                    "object": "embedding",
+                    "index": index,
+                    "embedding": emb,
+                }
+            )
+            total_tokens += _rough_token_estimate_for_usage(text)
+
+        return {
+            "object": "list",
+            "data": data,
+            "model": model_name,
+            "usage": {
+                "prompt_tokens": total_tokens,
+                "total_tokens": total_tokens,
+            },
+        }
 
     @app.post("/v1/responses")
     async def responses_api(request: Request, fm_sdk: Annotated[Any, Depends(get_fm_sdk)]) -> Any:

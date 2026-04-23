@@ -1,5 +1,7 @@
+import base64
 import dataclasses
 import json
+import struct
 from collections.abc import AsyncGenerator, Generator
 from typing import Any, cast
 from unittest.mock import AsyncMock, MagicMock
@@ -86,6 +88,10 @@ def mock_fm_sdk() -> dict[str, Any]:
     )
     mock_session_ctor.return_value = mock_session_inst
 
+    def fake_get_sentence_embedding(text: str) -> list[float]:
+        n = 512
+        return [0.01 * (len(text) % 7) + 0.001 * (i % 13) for i in range(n)]
+
     fake_sdk = type(
         "FakeFoundationModelsSDK",
         (),
@@ -96,6 +102,7 @@ def mock_fm_sdk() -> dict[str, Any]:
             "LanguageModelSession": mock_session_ctor,
             "guide": staticmethod(guide),
             "generable": staticmethod(generable),
+            "get_sentence_embedding": staticmethod(fake_get_sentence_embedding),
         },
     )()
 
@@ -479,6 +486,61 @@ def test_responses_api_preserves_regular_instructions(
     assert response.status_code == 200
     assert last_session_instructions(mock_fm_sdk) == "Math tutor"
     assert mock_fm_sdk["session_ctor"].call_args.kwargs["model"] is None
+
+
+def test_embeddings_openai_single_string(client: TestClient) -> None:
+    response = client.post(
+        "/v1/embeddings",
+        json={"input": "Hello world", "model": "text-embedding-3-small"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["object"] == "list"
+    assert data["model"] == "text-embedding-3-small"
+    assert len(data["data"]) == 1
+    assert data["data"][0]["object"] == "embedding"
+    assert data["data"][0]["index"] == 0
+    assert len(data["data"][0]["embedding"]) == 512
+    assert data["data"][0]["embedding"][0] == 0.01 * (len("Hello world") % 7)
+    assert data["usage"]["total_tokens"] == data["usage"]["prompt_tokens"]
+
+
+def test_embeddings_openai_array(client: TestClient) -> None:
+    response = client.post(
+        "/v1/embeddings",
+        json={"input": ["First phrase.", "Second phrase."]},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["data"]) == 2
+    assert data["data"][0]["index"] == 0
+    assert data["data"][1]["index"] == 1
+    assert len(data["data"][0]["embedding"]) == 512
+    # Different string lengths => different first scalar in fake
+    assert data["data"][0]["embedding"][0] != data["data"][1]["embedding"][0]
+
+
+def test_embeddings_base64(client: TestClient) -> None:
+    response = client.post(
+        "/v1/embeddings",
+        json={"input": "Test", "encoding_format": "base64"},
+    )
+    assert response.status_code == 200
+    raw = base64.standard_b64decode(response.json()["data"][0]["embedding"])
+    floats = struct.unpack(f"<{512}f", raw)
+    assert len(floats) == 512
+    assert abs(floats[0] - 0.01 * (4 % 7)) < 1e-6
+
+
+def test_embeddings_errors(client: TestClient) -> None:
+    assert client.post("/v1/embeddings", json={}).status_code == 400
+    assert client.post("/v1/embeddings", json={"input": ""}).status_code == 400
+    assert client.post("/v1/embeddings", json={"input": []}).status_code == 400
+    assert client.post("/v1/embeddings", json={"input": 42}).status_code == 400
+    assert (
+        client.post("/v1/embeddings", json={"input": "ok", "encoding_format": "float16"}).status_code
+        == 400
+    )
 
 
 def test_build_responses_prompt_strips_environment_context_for_codex_mode() -> None:
