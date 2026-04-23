@@ -83,18 +83,20 @@ jobs:
       - name: Set up Python 3.14
         run: uv python install 3.14
 
-      - name: Build Swift bridge
+      # Apple FoundationModels is not available on Linux; wheels use the committed
+      # macOS dylib built on macOS CI (see lint-and-test). Rebuild and commit the
+      # bridge in src/apple_fm_sdk/lib/ before tagging a release.
+      - name: Verify committed macOS bridge dylib
         run: |
-          cd src/apple_fm_sdk/foundation-models-c
-          # If we are on macos-26, we enable the 26.4+ native API compatibility flag
-          if [[ "$RUNNER_OS" == "macOS" && "$(sw_vers -productVersion)" == 26* ]]; then
-            swift build -c release -Xswiftc -DFOUNDATION_MODELS_26_4_API
-          else
-            swift build -c release
-          fi
-          mkdir -p ../lib
-          BIN="$(swift build -c release --show-bin-path)"
-          cp "${BIN}/libapple_fm_bridge.dylib" ../lib/
+          set -e
+          for name in libapple_fm_bridge.dylib libFoundationModels.dylib; do
+            if [ -f "src/apple_fm_sdk/lib/$name" ]; then
+              echo "Using committed native bridge: src/apple_fm_sdk/lib/$name"
+              exit 0
+            fi
+          done
+          echo "::error::Add a built libapple_fm_bridge.dylib under src/apple_fm_sdk/lib/ (build on macOS) before releasing."
+          exit 1
 
       - name: Verify tag matches pyproject.toml
         run: |
