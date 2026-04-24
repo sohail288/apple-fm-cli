@@ -1,0 +1,5 @@
+id,date,severity,system,summary
+1,2026-04-01,P2,VectorDB,"Qdrant pod restarted; no data loss, 2m partial outage in staging."
+2,2026-04-10,P1,EmbeddingAPI,"NLEmbedding spiked to 2x latency; mitigated by rate limit + cache warm-up."
+3,2026-04-18,P3,CI,"Build queue backlog on macos-26; cleared after image cache refresh."
+4,2026-05-02,P1,RAG-Query,"Retrieval returned empty on empty corpus; guard added in ingress pipeline."

@@ -1,3 +1,6 @@
 qdrant-client
 httpx
 apple-fm-cli
+pypdf
+fpdf2
+langchain-text-splitters

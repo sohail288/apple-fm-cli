@@ -1,0 +1,11 @@
+Acme Research Labs — Q3 2026 Product Briefing (confidential)
+
+The flagship "Atlas" on-device model stack targets sub-5W sustained inference on Apple silicon.
+Latency budget: first token p95 < 400ms for 4k context. Public positioning emphasizes privacy:
+no training on customer prompt content without explicit opt-in.
+
+The beta program is invite-only. Support tier "Atlas-Beta" is referenced in the external FAQ
+as of June 1, 2026. Competitor comparisons must not be published without Legal review (policy AT-LG-12).
+
+The emergency support bridge line for P0 production incidents is +1-555-010-ATLAS (24/7, PIN required).
+Escalation after 15 minutes of unresolved downtime automatically pages the SRE on-call rotation.
